@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AquaLog">
+<meta name="theme-color" content="#0a1628">
+<title>AquaLog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07111f;
+    --surface: #0d1f35;
+    --surface2: #112845;
+    --border: #1a3a5c;
+    --accent: #2dd4bf;
+    --accent2: #38bdf8;
+    --accent3: #a78bfa;
+    --warn: #fb923c;
+    --danger: #f87171;
+    --success: #4ade80;
+    --text: #e2eaf4;
+    --text2: #7fa3c8;
+    --text3: #4a6d8c;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+
+  /* App Shell */
+  #app { height: 100vh; display: flex; flex-direction: column; }
+  #header {
+    background: linear-gradient(180deg, #0a1e36 0%, transparent 100%);
+    padding: 52px 20px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #header h1 { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--accent); letter-spacing: -0.5px; }
+  #header .subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .header-date { font-size: 12px; color: var(--text2); text-align: right; }
+
+  #content { flex: 1; overflow-y: auto; padding: 0 16px 100px; scroll-behavior: smooth; }
+  #content::-webkit-scrollbar { display: none; }
+
+  /* Bottom Nav */
+  #nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(10,20,35,0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; padding: 10px 0 28px;
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; color: var(--text3); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 500; cursor: pointer; padding: 6px 0;
+    transition: color 0.2s;
+  }
+  .nav-btn .icon { font-size: 22px; transition: transform 0.2s; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn.active .icon { transform: scale(1.15); }
+
+  /* Pages */
+  .page { display: none; }
+  .page.active { display: block; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text3); margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px; color: var(--text); margin: 20px 0 12px;
+  }
+
+  /* Dashboard */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .summary-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .summary-item .val { font-size: 22px; font-weight: 600; color: var(--accent); }
+  .summary-item .lbl { font-size: 11px; color: var(--text3); }
+  .summary-item .sub { font-size: 11px; color: var(--text2); }
+
+  .alert-strip {
+    background: linear-gradient(135deg, rgba(251,146,60,0.15), rgba(251,146,60,0.05));
+    border: 1px solid rgba(251,146,60,0.4);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .alert-strip .icon { font-size: 20px; }
+  .alert-strip .msg { font-size: 13px; color: var(--warn); }
+
+  /* Water Quality */
+  .param-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .param-row:last-child { border-bottom: none; }
+  .param-name { font-size: 14px; color: var(--text2); }
+  .param-val { font-size: 16px; font-weight: 600; }
+  .param-status { font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+  .status-ok { background: rgba(74,222,128,0.15); color: var(--success); }
+  .status-warn { background: rgba(251,146,60,0.15); color: var(--warn); }
+  .status-bad { background: rgba(248,113,113,0.15); color: var(--danger); }
+
+  .water-history { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .water-history::-webkit-scrollbar { display: none; }
+  .history-chip {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11px; color: var(--text2);
+    min-width: 80px;
+  }
+  .history-chip .date { color: var(--text3); margin-bottom: 2px; }
+
+  /* Lighting */
+  .light-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .light-row:last-child { border-bottom: none; }
+  .light-info { display: flex; flex-direction: column; gap: 2px; }
+  .light-name { font-size: 14px; }
+  .light-time { font-size: 12px; color: var(--text2); }
+  .light-phase {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    background: rgba(167,139,250,0.15); color: var(--accent3);
+  }
+  .toggle-switch {
+    position: relative; width: 44px; height: 26px;
+    background: var(--border); border-radius: 13px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-switch.on { background: var(--accent); }
+  .toggle-switch::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; background: white; border-radius: 50%;
+    top: 3px; left: 3px; transition: left 0.2s;
+  }
+  .toggle-switch.on::after { left: 21px; }
+
+  /* Residents */
+  .resident-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .resident-icon { font-size: 28px; }
+  .resident-info { flex: 1; }
+  .resident-name { font-size: 15px; font-weight: 500; }
+  .resident-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .resident-count {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px; color: var(--accent);
+  }
+
+  /* Log */
+  .log-entry {
+    display: flex; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-top: 5px; flex-shrink: 0;
+  }
+  .log-dot.water { background: var(--accent2); }
+  .log-dot.light { background: var(--accent3); }
+  .log-dot.note { background: var(--accent); }
+  .log-dot.resident { background: var(--success); }
+  .log-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .log-date { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  /* Forms / Inputs */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; display: block; font-weight: 500; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: none; height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Buttons */
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: var(--radius-sm);
+    color: #07111f; font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+  .btn-sm {
+    padding: 8px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text2);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer;
+  }
+  .btn-danger {
+    padding: 8px 16px;
+    background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+    border-radius: var(--radius-sm); color: var(--danger);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 200; display: none; align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 20px 20px 40px;
+    width: 100%; max-height: 90vh; overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+  .modal::-webkit-scrollbar { display: none; }
+  @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 20px; }
+
+  /* Progress bar for water change */
+  .progress-bar { background: var(--border); border-radius: 4px; height: 6px; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s; }
+
+  /* Pill tabs */
+  .pill-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; }
+  .pill-tabs::-webkit-scrollbar { display: none; }
+  .pill-tab {
+    flex-shrink: 0; padding: 7px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; color: var(--text2);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pill-tab.active { background: var(--accent); border-color: var(--accent); color: #07111f; font-weight: 600; }
+
+  /* Waves decoration */
+  .wave-header {
+    height: 60px; overflow: hidden; position: relative;
+    margin-bottom: -2px;
+  }
+
+  /* Plant items */
+  .plant-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .plant-item:last-child { border-bottom: none; }
+  .plant-emoji { font-size: 22px; }
+  .plant-info { flex: 1; }
+  .plant-name { font-size: 14px; font-weight: 500; }
+  .plant-latin { font-size: 11px; color: var(--text3); font-style: italic; }
+  .plant-health { font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+  .health-gut { background: rgba(74,222,128,0.15); color: var(--success); }
+  .health-mittel { background: rgba(251,146,60,0.15); color: var(--warn); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div>
+      <h1>🐠 AquaLog</h1>
+      <div class="subtitle">Mein Aquarium</div>
+    </div>
+    <div class="header-date" id="headerDate"></div>
+  </div>
+
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div id="alertZone"></div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="val" id="dash-temp">–</div>
+          <div class="lbl">Temperatur</div>
+          <div class="sub">°C</div>
+        </div>
+        <div class="summary-item">
+          <div class="val" id="dash-ph">–</div>
+          <div class="lbl">pH-Wert</div>
+          <div class="sub">Leitfähigkeit</div>
+        </div>
+        <div class="summary-item">
+          <div class="val" id="dash-lastchange">–</div>
+          <div class="lbl">Letzter WW</div>
+          <div class="sub">Wasserwechsel</div>
+        </div>
+        <div class="summary-item">
+          <div class="val" id="dash-nextchange">–</div>
+          <div class="lbl">Nächster WW</div>
+          <div class="sub">Empfohlen</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Wasserwechsel-Fortschritt</div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
+          <span>Letzter WW</span><span id="ww-percent">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="ww-progress" style="width:0%"></div></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Empfehlung: alle 7 Tage</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bewohner-Übersicht</div>
+        <div id="dash-residents"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Beleuchtung Heute</div>
+        <div id="dash-lights"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Letzte Einträge</div>
+        <div id="dash-log"></div>
+      </div>
+    </div>
+
+    <!-- WASSER -->
+    <div id="page-water" class="page">
+      <div class="section-title">Wasserqualität</div>
+
+      <div class="card">
+        <div class="card-title">Aktuelle Werte</div>
+        <div id="param-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Messhistorie</div>
+        <div class="water-history" id="water-history"></div>
+      </div>
+
+      <div class="card" style="border-color: rgba(45,212,191,0.3)">
+        <div class="card-title">Wasserwechsel dokumentieren</div>
+        <div class="form-group">
+          <label class="form-label">Datum</label>
+          <input type="date" class="form-input" id="ww-date">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Menge (Liter)</label>
+            <input type="number" class="form-input" id="ww-liter" placeholder="z.B. 20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Anteil (%)</label>
+            <input type="number" class="form-input" id="ww-pct" placeholder="z.B. 30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notiz</label>
+          <textarea class="form-textarea" id="ww-note" placeholder="Zusätzliche Beobachtungen..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveWaterChange()">💧 Wasserwechsel speichern</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Messung hinzufügen</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Temperatur (°C)</label>
+            <input type="number" step="0.1" class="form-input" id="m-temp" placeholder="24.0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">pH-Wert</label>
+            <input type="number" step="0.1" class="form-input" id="m-ph" placeholder="7.0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">GH (°dH)</label>
+            <input type="number" step="0.5" class="form-input" id="m-gh" placeholder="8">
+          </div>
+          <div class="form-group">
+            <label class="form-label">KH (°dH)</label>
+            <input type="number" step="0.5" class="form-input" id="m-kh" placeholder="4">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nitrit NO₂ (mg/l)</label>
+            <input type="number" step="0.01" class="form-input" id="m-no2" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nitrat NO₃ (mg/l)</label>
+            <input type="number" step="1" class="form-input" id="m-no3" placeholder="10">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="saveMeasurement()" style="margin-top:4px">📊 Messung speichern</button>
+      </div>
+    </div>
+
+    <!-- PFLANZEN -->
+    <div id="page-plants" class="page">
+      <div class="section-title">Pflanzen & Bewohner</div>
+
+      <div class="pill-tabs" id="residentTabs">
+        <button class="pill-tab active" onclick="switchResidentTab('plants',this)">🌿 Pflanzen</button>
+        <button class="pill-tab" onclick="switchResidentTab('shrimp',this)">🦐 Garnelen</button>
+        <button class="pill-tab" onclick="switchResidentTab('snails',this)">🐌 Schnecken</button>
+      </div>
+
+      <div id="tab-plants">
+        <div class="card" id="plant-list-card"></div>
+        <div class="card" style="border-color:rgba(74,222,128,0.3)">
+          <div class="card-title">Pflanze hinzufügen</div>
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-input" id="p-name" placeholder="z.B. Javafarn">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Wissenschaftlicher Name</label>
+            <input type="text" class="form-input" id="p-latin" placeholder="z.B. Microsorum pteropus">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Anzahl / Position</label>
+              <input type="text" class="form-input" id="p-pos" placeholder="z.B. 3 Töpfe, hinten">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Zustand</label>
+              <select class="form-select" id="p-health">
+                <option value="gut">Gut</option>
+                <option value="mittel">Mittel</option>
+                <option value="schlecht">Schlecht</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="addPlant()">🌱 Pflanze hinzufügen</button>
+        </div>
+      </div>
+
+      <div id="tab-shrimp" style="display:none">
+        <div class="card" id="shrimp-card"></div>
+        <div class="card" style="border-color:rgba(45,212,191,0.3)">
+          <div class="card-title">Garnelen-Bestand aktualisieren</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Anzahl gesamt</label>
+              <input type="number" class="form-input" id="sh-count" placeholder="z.B. 20">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Davon Weibchen</label>
+              <input type="number" class="form-input" id="sh-female" placeholder="z.B. 12">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bemerkung</label>
+            <input type="text" class="form-input" id="sh-note" placeholder="z.B. 3 tragende Weibchen">
+          </div>
+          <button class="btn-primary" onclick="updateShrimp()">🦐 Bestand speichern</button>
+        </div>
+      </div>
+
+      <div id="tab-snails" style="display:none">
+        <div class="card" id="snails-card"></div>
+        <div class="card" style="border-color:rgba(167,139,250,0.3)">
+          <div class="card-title">Schnecken-Bestand aktualisieren</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Art</label>
+              <input type="text" class="form-input" id="sn-type" placeholder="z.B. Posthornschnecke">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Anzahl (ca.)</label>
+              <input type="number" class="form-input" id="sn-count" placeholder="z.B. 5">
+            </div>
+          </div>
+          <button class="btn-primary" onclick="updateSnails()">🐌 Bestand speichern</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BELEUCHTUNG -->
+    <div id="page-light" class="page">
+      <div class="section-title">Beleuchtung</div>
+
+      <div class="card">
+        <div class="card-title">Beleuchtungsphasen</div>
+        <div id="light-phases"></div>
+      </div>
+
+      <div class="card" style="border-color:rgba(167,139,250,0.3)">
+        <div class="card-title">Beleuchtungszeit hinzufügen</div>
+        <div class="form-group">
+          <label class="form-label">Bezeichnung</label>
+          <input type="text" class="form-input" id="l-name" placeholder="z.B. Hauptlicht, CO₂-Phase">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Einschaltzeit</label>
+            <input type="time" class="form-input" id="l-on">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ausschaltzeit</label>
+            <input type="time" class="form-input" id="l-off">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Farbe / Typ</label>
+          <select class="form-select" id="l-type">
+            <option value="Vollspektrum">Vollspektrum</option>
+            <option value="Weiß">Weißlicht</option>
+            <option value="Blau">Blaulicht (Mondlicht)</option>
+            <option value="Rot+Blau">Rot+Blau (Pflanzenwuchs)</option>
+            <option value="CO₂">CO₂-Anlage</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="addLightPhase()">💡 Phase speichern</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Lichtprotokoll</div>
+        <div id="light-log"></div>
+      </div>
+    </div>
+
+    <!-- PROTOKOLL -->
+    <div id="page-log" class="page">
+      <div class="section-title">Protokoll</div>
+      <div class="card">
+        <div class="card-title">Eintrag hinzufügen</div>
+        <div class="form-group">
+          <label class="form-label">Kategorie</label>
+          <select class="form-select" id="log-cat">
+            <option value="note">📝 Notiz</option>
+            <option value="water">💧 Wasserchemie</option>
+            <option value="resident">🦐 Bewohner</option>
+            <option value="light">💡 Beleuchtung</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Eintrag</label>
+          <textarea class="form-textarea" id="log-text" placeholder="Was hast du beobachtet?"></textarea>
+        </div>
+        <button class="btn-primary" onclick="addLogEntry()">✏️ Eintrag speichern</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Alle Einträge</div>
+        <div id="full-log"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <div id="nav">
+    <button class="nav-btn active" onclick="showPage('dashboard',this)">
+      <span class="icon">🏠</span>Dashboard
+    </button>
+    <button class="nav-btn" onclick="showPage('water',this)">
+      <span class="icon">💧</span>Wasser
+    </button>
+    <button class="nav-btn" onclick="showPage('plants',this)">
+      <span class="icon">🌿</span>Bewohner
+    </button>
+    <button class="nav-btn" onclick="showPage('light',this)">
+      <span class="icon">💡</span>Licht
+    </button>
+    <button class="nav-btn" onclick="showPage('log',this)">
+      <span class="icon">📋</span>Protokoll
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Storage ──────────────────────────────────────────────────────────────────
+const S = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  measurements: S.get('measurements') || [],
+  waterChanges: S.get('waterChanges') || [],
+  plants: S.get('plants') || [
+    { id:1, name:'Javafarn', latin:'Microsorum pteropus', pos:'Hintergrund', health:'gut', emoji:'🌿' },
+    { id:2, name:'Mooskugel', latin:'Aegagropila linnaei', pos:'Vordergrund', health:'gut', emoji:'🟢' },
+    { id:3, name:'Wasserpest', latin:'Elodea canadensis', pos:'Seite', health:'gut', emoji:'🌱' },
+  ],
+  shrimp: S.get('shrimp') || { count: 15, female: 8, note: 'Deutsche Zucht' },
+  snails: S.get('snails') || [{ type: 'Posthornschnecke', count: 3 }],
+  lightPhases: S.get('lightPhases') || [
+    { id:1, name:'Hauptlicht', on:'10:00', off:'20:00', type:'Vollspektrum', active:true },
+    { id:2, name:'CO₂-Anlage', on:'09:30', off:'19:30', type:'CO₂', active:true },
+  ],
+  log: S.get('log') || [],
+};
+
+function save() {
+  ['measurements','waterChanges','plants','shrimp','snails','lightPhases','log'].forEach(k => S.set(k, state[k]));
+}
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function today() { return new Date().toISOString().split('T')[0]; }
+function fmtDate(d) {
+  if (!d) return '–';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('de-DE', { day:'2-digit', month:'short', year:'numeric' });
+}
+function daysSince(d) {
+  if (!d) return null;
+  return Math.floor((Date.now() - new Date(d+'T12:00:00').getTime()) / 86400000);
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'water') renderWater();
+  if (id === 'plants') renderPlants();
+  if (id === 'light') renderLight();
+  if (id === 'log') renderLog();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const now = new Date();
+  document.getElementById('headerDate').innerHTML = now.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'});
+
+  // Last measurement
+  const last = state.measurements[state.measurements.length - 1];
+  document.getElementById('dash-temp').textContent = last ? last.temp + '°' : '–';
+  document.getElementById('dash-ph').textContent = last ? last.ph : '–';
+
+  // Water change
+  const lastWC = state.waterChanges[state.waterChanges.length - 1];
+  const days = lastWC ? daysSince(lastWC.date) : null;
+  document.getElementById('dash-lastchange').textContent = days !== null ? days + 'd' : '–';
+  document.getElementById('dash-nextchange').textContent = days !== null ? Math.max(0, 7 - days) + 'd' : '–';
+
+  const pct = days !== null ? Math.min(100, Math.round(days / 7 * 100)) : 0;
+  document.getElementById('ww-progress').style.width = pct + '%';
+  document.getElementById('ww-percent').textContent = pct + '%';
+  document.getElementById('ww-progress').style.background =
+    pct > 90 ? 'linear-gradient(90deg,#fb923c,#f87171)' :
+    pct > 60 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' :
+    'linear-gradient(90deg,var(--accent),var(--accent2))';
+
+  // Alert
+  const alertZone = document.getElementById('alertZone');
+  alertZone.innerHTML = '';
+  if (days !== null && days >= 7) {
+    alertZone.innerHTML = `<div class="alert-strip"><span class="icon">⚠️</span><span class="msg">Wasserwechsel fällig! Letzter WW vor ${days} Tagen.</span></div>`;
+  }
+
+  // Residents
+  const dr = document.getElementById('dash-residents');
+  dr.innerHTML = `
+    <div class="param-row">
+      <span class="param-name">🦐 Neocaridina Garnelen</span>
+      <span class="param-val" style="color:var(--accent)">${state.shrimp.count}</span>
+    </div>
+    <div class="param-row">
+      <span class="param-name">🌿 Pflanzenarten</span>
+      <span class="param-val" style="color:var(--success)">${state.plants.length}</span>
+    </div>
+    <div class="param-row" style="border:none">
+      <span class="param-name">🐌 Schnecken</span>
+      <span class="param-val" style="color:var(--accent3)">${state.snails.reduce((a,s)=>a+s.count,0)}</span>
+    </div>`;
+
+  // Lights
+  const dl = document.getElementById('dash-lights');
+  dl.innerHTML = state.lightPhases.map(l => `
+    <div class="light-row">
+      <div class="light-info">
+        <div class="light-name">${l.name}</div>
+        <div class="light-time">${l.on} – ${l.off} · ${l.type}</div>
+      </div>
+      <span class="light-phase">${isLightOn(l) ? '🟢 AN' : '⚫ AUS'}</span>
+    </div>`).join('') || '<div style="color:var(--text3);font-size:13px">Keine Phasen konfiguriert</div>';
+
+  // Log preview
+  const dlog = document.getElementById('dash-log');
+  const recent = [...state.log].reverse().slice(0,4);
+  dlog.innerHTML = recent.length ? recent.map(e => logEntryHtml(e)).join('') : '<div style="color:var(--text3);font-size:13px">Noch keine Einträge</div>';
+}
+
+function isLightOn(phase) {
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const [oh, om] = phase.on.split(':').map(Number);
+  const [fh, fm] = phase.off.split(':').map(Number);
+  const on = oh * 60 + om, off = fh * 60 + fm;
+  return cur >= on && cur < off;
+}
+
+// ── Water ─────────────────────────────────────────────────────────────────────
+const PARAMS = [
+  { key:'temp', label:'Temperatur', unit:'°C', min:22, max:26, ideal:'22–26' },
+  { key:'ph', label:'pH-Wert', unit:'', min:6.5, max:7.5, ideal:'6.5–7.5' },
+  { key:'gh', label:'GH', unit:'°dH', min:4, max:12, ideal:'4–12' },
+  { key:'kh', label:'KH', unit:'°dH', min:3, max:8, ideal:'3–8' },
+  { key:'no2', label:'Nitrit NO₂', unit:'mg/l', min:0, max:0.1, ideal:'0–0.1' },
+  { key:'no3', label:'Nitrat NO₃', unit:'mg/l', min:0, max:25, ideal:'0–25' },
+];
+
+function paramStatus(param, val) {
+  if (val === undefined || val === null || val === '') return { cls:'', label:'–' };
+  const v = parseFloat(val);
+  if (v >= param.min && v <= param.max) return { cls:'status-ok', label:'✓ OK' };
+  if (v < param.min * 0.8 || v > param.max * 1.3) return { cls:'status-bad', label:'⚠ Kritisch' };
+  return { cls:'status-warn', label:'~ Grenzwertig' };
+}
+
+function renderWater() {
+  document.getElementById('ww-date').value = today();
+  const last = state.measurements[state.measurements.length - 1] || {};
+  const pl = document.getElementById('param-list');
+  pl.innerHTML = PARAMS.map(p => {
+    const val = last[p.key];
+    const s = paramStatus(p, val);
+    return `<div class="param-row">
+      <span class="param-name">${p.label}</span>
+      <span class="param-val">${val !== undefined ? val + p.unit : '–'}</span>
+      <span class="param-status ${s.cls}">${s.label}</span>
+    </div>`;
+  }).join('');
+
+  const hist = document.getElementById('water-history');
+  hist.innerHTML = [...state.waterChanges].reverse().slice(0,8).map(wc => `
+    <div class="history-chip">
+      <div class="date">${fmtDate(wc.date)}</div>
+      <div>${wc.liter ? wc.liter+'L' : ''} ${wc.pct ? wc.pct+'%' : ''}</div>
+    </div>`).join('') || '<div style="color:var(--text3);font-size:13px">Noch keine Wasserwechsel</div>';
+}
+
+function saveMeasurement() {
+  const m = {};
+  PARAMS.forEach(p => {
+    const el = document.getElementById('m-' + p.key);
+    if (el && el.value) m[p.key] = parseFloat(el.value);
+  });
+  if (!Object.keys(m).length) { alert('Bitte mindestens einen Wert eingeben.'); return; }
+  m.date = today();
+  state.measurements.push(m);
+  addLog('water', `Messung: ${PARAMS.filter(p=>m[p.key]!==undefined).map(p=>p.label+' '+m[p.key]+p.unit).join(', ')}`);
+  save(); renderWater(); showToast('📊 Messung gespeichert');
+  PARAMS.forEach(p => { const el = document.getElementById('m-' + p.key); if(el) el.value = ''; });
+}
+
+function saveWaterChange() {
+  const date = document.getElementById('ww-date').value;
+  const liter = document.getElementById('ww-liter').value;
+  const pct = document.getElementById('ww-pct').value;
+  const note = document.getElementById('ww-note').value;
+  if (!date) { alert('Bitte Datum angeben'); return; }
+  state.waterChanges.push({ date, liter: liter||'', pct: pct||'', note });
+  addLog('water', `Wasserwechsel: ${liter?liter+'L ':''} ${pct?pct+'% ':''}${note||''}`);
+  save(); renderWater(); renderDashboard(); showToast('💧 Wasserwechsel gespeichert');
+  document.getElementById('ww-liter').value = '';
+  document.getElementById('ww-pct').value = '';
+  document.getElementById('ww-note').value = '';
+}
+
+// ── Plants / Residents ────────────────────────────────────────────────────────
+function switchResidentTab(tab, btn) {
+  ['plants','shrimp','snails'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function renderPlants() {
+  // Plants
+  const hmap = { gut: 'health-gut', mittel: 'health-mittel', schlecht: 'status-bad' };
+  const pc = document.getElementById('plant-list-card');
+  pc.innerHTML = '<div class="card-title">Pflanzenliste</div>' +
+    (state.plants.length ? state.plants.map((p,i) => `
+      <div class="plant-item">
+        <span class="plant-emoji">${p.emoji||'🌿'}</span>
+        <div class="plant-info">
+          <div class="plant-name">${p.name}</div>
+          <div class="plant-latin">${p.latin||''} ${p.pos ? '· '+p.pos : ''}</div>
+        </div>
+        <span class="plant-health ${hmap[p.health]||'health-gut'}">${p.health}</span>
+        <button class="btn-danger" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="removePlant(${i})">✕</button>
+      </div>`).join('') : '<div style="color:var(--text3);font-size:13px">Noch keine Pflanzen eingetragen</div>');
+
+  // Shrimp
+  const sc = document.getElementById('shrimp-card');
+  sc.innerHTML = `<div class="card-title">Garnelen-Bestand</div>
+    <div class="resident-card">
+      <span class="resident-icon">🦐</span>
+      <div class="resident-info">
+        <div class="resident-name">Neocaridina davidi</div>
+        <div class="resident-sub">♀ ${state.shrimp.female} Weibchen · ${state.shrimp.note||''}</div>
+      </div>
+      <div class="resident-count">${state.shrimp.count}</div>
+    </div>`;
+
+  // Snails
+  const snc = document.getElementById('snails-card');
+  snc.innerHTML = '<div class="card-title">Schnecken-Bestand</div>' +
+    (state.snails.length ? state.snails.map((s,i) => `
+      <div class="resident-card">
+        <span class="resident-icon">🐌</span>
+        <div class="resident-info">
+          <div class="resident-name">${s.type}</div>
+        </div>
+        <div class="resident-count">${s.count}</div>
+        <button class="btn-danger" style="margin-left:8px;padding:4px 10px;font-size:11px" onclick="removeSnail(${i})">✕</button>
+      </div>`).join('') : '<div style="color:var(--text3);font-size:13px">Noch keine Schnecken eingetragen</div>');
+}
+
+function addPlant() {
+  const name = document.getElementById('p-name').value.trim();
+  if (!name) { alert('Name erforderlich'); return; }
+  const emojis = {'🌿':1};
+  state.plants.push({
+    id: Date.now(), name,
+    latin: document.getElementById('p-latin').value.trim(),
+    pos: document.getElementById('p-pos').value.trim(),
+    health: document.getElementById('p-health').value,
+    emoji: '🌿'
+  });
+  addLog('resident', `Pflanze hinzugefügt: ${name}`);
+  save(); renderPlants(); showToast('🌱 Pflanze hinzugefügt');
+  ['p-name','p-latin','p-pos'].forEach(id => document.getElementById(id).value = '');
+}
+
+function removePlant(i) {
+  if (!confirm('Pflanze entfernen?')) return;
+  const name = state.plants[i].name;
+  state.plants.splice(i, 1);
+  addLog('resident', `Pflanze entfernt: ${name}`);
+  save(); renderPlants();
+}
+
+function updateShrimp() {
+  const count = parseInt(document.getElementById('sh-count').value);
+  const female = parseInt(document.getElementById('sh-female').value);
+  const note = document.getElementById('sh-note').value.trim();
+  if (isNaN(count)) { alert('Anzahl eingeben'); return; }
+  state.shrimp = { count, female: isNaN(female)?0:female, note };
+  addLog('resident', `Garnelen aktualisiert: ${count} Tiere, ${female||0} ♀`);
+  save(); renderPlants(); showToast('🦐 Bestand gespeichert');
+  document.getElementById('sh-count').value = '';
+  document.getElementById('sh-female').value = '';
+  document.getElementById('sh-note').value = '';
+}
+
+function updateSnails() {
+  const type = document.getElementById('sn-type').value.trim();
+  const count = parseInt(document.getElementById('sn-count').value);
+  if (!type || isNaN(count)) { alert('Art und Anzahl eingeben'); return; }
+  const existing = state.snails.findIndex(s => s.type.toLowerCase() === type.toLowerCase());
+  if (existing >= 0) state.snails[existing].count = count;
+  else state.snails.push({ type, count });
+  addLog('resident', `Schnecken (${type}): ${count} Tiere`);
+  save(); renderPlants(); showToast('🐌 Bestand gespeichert');
+  document.getElementById('sn-type').value = '';
+  document.getElementById('sn-count').value = '';
+}
+
+function removeSnail(i) {
+  state.snails.splice(i, 1);
+  save(); renderPlants();
+}
+
+// ── Lighting ──────────────────────────────────────────────────────────────────
+function renderLight() {
+  const lp = document.getElementById('light-phases');
+  lp.innerHTML = state.lightPhases.length ? state.lightPhases.map((l,i) => `
+    <div class="light-row">
+      <div class="light-info">
+        <div class="light-name">💡 ${l.name}</div>
+        <div class="light-time">${l.on} – ${l.off} · ${l.type}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="light-phase">${isLightOn(l) ? '🟢 AN' : '⚫ AUS'}</span>
+        <button class="btn-danger" style="padding:4px 8px;font-size:11px" onclick="removeLightPhase(${i})">✕</button>
+      </div>
+    </div>`).join('') : '<div style="color:var(--text3);font-size:13px">Noch keine Phasen</div>';
+
+  const ll = document.getElementById('light-log');
+  const entries = state.log.filter(e => e.cat === 'light').reverse().slice(0,10);
+  ll.innerHTML = entries.length ? entries.map(e => logEntryHtml(e)).join('') : '<div style="color:var(--text3);font-size:13px">Noch keine Einträge</div>';
+}
+
+function addLightPhase() {
+  const name = document.getElementById('l-name').value.trim();
+  const on = document.getElementById('l-on').value;
+  const off = document.getElementById('l-off').value;
+  const type = document.getElementById('l-type').value;
+  if (!name || !on || !off) { alert('Name, Ein- und Ausschaltzeit erforderlich'); return; }
+  state.lightPhases.push({ id: Date.now(), name, on, off, type, active: true });
+  addLog('light', `Beleuchtungsphase: "${name}" ${on}–${off} (${type})`);
+  save(); renderLight(); showToast('💡 Phase gespeichert');
+  document.getElementById('l-name').value = '';
+  document.getElementById('l-on').value = '';
+  document.getElementById('l-off').value = '';
+}
+
+function removeLightPhase(i) {
+  const name = state.lightPhases[i].name;
+  state.lightPhases.splice(i, 1);
+  addLog('light', `Phase entfernt: "${name}"`);
+  save(); renderLight();
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function addLog(cat, text) {
+  state.log.push({ cat, text, date: new Date().toISOString() });
+}
+
+function addLogEntry() {
+  const text = document.getElementById('log-text').value.trim();
+  if (!text) return;
+  const cat = document.getElementById('log-cat').value;
+  addLog(cat, text);
+  save(); renderLog(); showToast('✏️ Eintrag gespeichert');
+  document.getElementById('log-text').value = '';
+}
+
+function logEntryHtml(e) {
+  const catColors = { water:'water', light:'light', note:'note', resident:'resident' };
+  const catLabels = { water:'💧 Wasser', light:'💡 Licht', note:'📝 Notiz', resident:'🦐 Bewohner' };
+  const dt = new Date(e.date);
+  return `<div class="log-entry">
+    <div class="log-dot ${catColors[e.cat]||'note'}"></div>
+    <div>
+      <div class="log-text">${e.text}</div>
+      <div class="log-date">${catLabels[e.cat]||'Notiz'} · ${dt.toLocaleDateString('de-DE')} ${dt.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+  </div>`;
+}
+
+function renderLog() {
+  const fl = document.getElementById('full-log');
+  fl.innerHTML = state.log.length ? [...state.log].reverse().map(e => logEntryHtml(e)).join('') : '<div style="color:var(--text3);font-size:13px">Noch keine Einträge vorhanden</div>';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    Object.assign(t.style, {
+      position:'fixed', bottom:'100px', left:'50%', transform:'translateX(-50%)',
+      background:'var(--accent)', color:'#07111f', padding:'10px 20px',
+      borderRadius:'20px', fontWeight:'600', fontSize:'13px', zIndex:'999',
+      transition:'opacity 0.3s', whiteSpace:'nowrap'
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderDashboard();
+</script>
+</body>
+</html>

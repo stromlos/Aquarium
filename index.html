@@ -53,6 +53,17 @@
   .cal-event-icon{font-size:18px;flex-shrink:0;}
   .cal-event-text{font-size:13px;color:var(--text2);line-height:1.5;}
   .cal-event-time{font-size:10px;color:var(--text3);margin-top:2px;}
+
+  /* WW Recommendation Table */
+  .ww-rec-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}
+  .ww-rec-row:active{border-color:var(--accent);}
+  .ww-rec-row.selected{border-color:var(--accent);background:rgba(45,212,191,0.08);}
+  .ww-rec-pct{font-size:18px;font-weight:700;color:var(--accent2);min-width:48px;}
+  .ww-rec-liter{font-size:14px;color:var(--text2);flex:1;text-align:center;}
+  .ww-rec-check{font-size:18px;color:var(--text3);}
+  .ww-rec-row.selected .ww-rec-check{color:var(--accent);}
+  .ww-rec-empty{font-size:13px;color:var(--text3);text-align:center;padding:10px 0;}
+  .ww-rec-empty button{margin-top:8px;}
   .page{display:none;max-width:100%;overflow-x:hidden;}
   .page.active{display:block;animation:fadeUp 0.35s cubic-bezier(0.4,0,0.2,1);}
   @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
@@ -308,6 +319,10 @@
         <div class="chart-legend"><span id="chartMin"></span><span id="chartAvg"></span><span id="chartMax"></span></div>
       </div>
       <div class="card"><div class="card-title">Wasserwechsel-Historie</div><div class="water-history" id="water-history"></div></div>
+      <div class="card" id="ww-recommend-card" style="border-color:rgba(56,189,248,0.3)">
+        <div class="card-title">📐 Empfehlung Wasserwechsel</div>
+        <div id="ww-recommend-content"></div>
+      </div>
       <div class="card" style="border-color:rgba(45,212,191,0.3)">
         <div class="card-title">Wasserwechsel dokumentieren</div>
         <div class="form-group"><label class="form-label">Datum</label><input type="date" class="form-input" id="ww-date"></div>
@@ -715,6 +730,15 @@
       </div>
     </div>
 
+    <!-- BECKENVOLUMEN -->
+    <div class="setup-section">
+      <div class="setup-section-title">🛢️ Becken</div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Gesamtvolumen (Liter)</label>
+        <input type="number" step="1" class="form-input" id="setup-tankvolume" placeholder="z.B. 60">
+      </div>
+    </div>
+
     <!-- GRENZWERTE -->
     <div class="setup-section">
       <div class="setup-section-title">⚗️ Grenzwerte Wasserwerte</div>
@@ -746,7 +770,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -1064,6 +1088,7 @@ function renderWater(){
   document.getElementById('co2-card').innerHTML = co2html;
 
   document.getElementById('water-history').innerHTML=[...state.waterChanges].reverse().slice(0,8).map(wc=>`<div class="history-chip"><div class="date">${fmtDate(wc.date)}</div><div>${wc.liter?wc.liter+'L ':''} ${wc.pct?wc.pct+'%':''}</div></div>`).join('')||'<div style="color:var(--text3);font-size:13px">Noch keine Wasserwechsel</div>';
+  renderWWRecommendation();
   renderFertHistory();
 }
 function saveMeasurement(){
@@ -1080,6 +1105,50 @@ function saveWaterChange(){
   state.waterChanges.push({date,liter,pct,note});addLog('water',`Wasserwechsel: ${liter?liter+'L ':''}${pct?pct+'% ':''}${note||''}`);
   save();renderWater();renderDashboard();showToast('💧 Wasserwechsel gespeichert');
   ['ww-liter','ww-pct','ww-note'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.ww-rec-row').forEach(r=>r.classList.remove('selected'));
+}
+
+// ── Wasserwechsel-Empfehlung ─────────────────────────────────────────────────
+const WW_RECOMMEND_PCTS = [10, 20, 35, 50];
+
+function renderWWRecommendation(){
+  const el = document.getElementById('ww-recommend-content');
+  const vol = settings.tankVolume;
+
+  if(!vol || vol <= 0){
+    el.innerHTML = `
+      <div class="ww-rec-empty">
+        Kein Beckenvolumen hinterlegt.<br>Trage es in den Einstellungen ein, um Mengen­empfehlungen zu erhalten.
+        <div><button class="btn-secondary" onclick="openSetup()">⚙️ Beckenvolumen festlegen</button></div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Beckenvolumen: <strong style="color:var(--text2)">${vol} L</strong> · Tippe eine Zeile an, um sie ins Formular zu übernehmen</div>
+    ${WW_RECOMMEND_PCTS.map(pct=>{
+      const liters = Math.round(vol * pct / 100 * 10) / 10;
+      return `<div class="ww-rec-row" data-pct="${pct}" onclick="selectWWRecommendation(${pct}, ${liters})">
+        <span class="ww-rec-pct">${pct}%</span>
+        <span class="ww-rec-liter">≈ ${liters} L von ${vol} L</span>
+        <span class="ww-rec-check">○</span>
+      </div>`;
+    }).join('')}`;
+}
+
+function selectWWRecommendation(pct, liters){
+  document.getElementById('ww-liter').value = liters;
+  document.getElementById('ww-pct').value   = pct;
+
+  document.querySelectorAll('.ww-rec-row').forEach(r=>{
+    const isSelected = parseFloat(r.dataset.pct) === pct;
+    r.classList.toggle('selected', isSelected);
+    r.querySelector('.ww-rec-check').textContent = isSelected ? '✓' : '○';
+  });
+
+  // Scroll to the form so the user sees the filled values
+  document.getElementById('ww-liter').closest('.card').scrollIntoView({behavior:'smooth', block:'center'});
+  showToast(`${pct}% ausgewählt → ${liters} L übernommen`);
 }
 
 // ── Fertilizer ───────────────────────────────────────────────────────────────
@@ -3079,6 +3148,9 @@ function applyAllSettings(){
 function openSetup(){
   const modal=document.getElementById('setupModal');
 
+  // Tank volume
+  document.getElementById('setup-tankvolume').value = settings.tankVolume || '';
+
   // Build theme grid
   const tg=document.getElementById('themeGrid');
   tg.innerHTML=THEMES.map(t=>`
@@ -3128,6 +3200,10 @@ function pickTheme(id, btn){
 }
 
 function saveSettings(){
+  // Save tank volume
+  const tv = parseFloat(document.getElementById('setup-tankvolume').value);
+  settings.tankVolume = (!isNaN(tv) && tv > 0) ? tv : null;
+
   // Save limits
   PARAMS.forEach(p=>{
     const minEl=document.getElementById('lim-min-'+p.key);
@@ -3146,7 +3222,8 @@ function saveSettings(){
 
 function resetSettings(){
   if(!confirm('Alle Einstellungen auf Standard zurücksetzen?'))return;
-  settings={ theme:'ocean', customColors:{}, limits:JSON.parse(JSON.stringify(DEFAULT_LIMITS)) };
+  const tv = settings.tankVolume;
+  settings={ theme:'ocean', customColors:{}, limits:JSON.parse(JSON.stringify(DEFAULT_LIMITS)), tankVolume:tv };
   S.set('settings',settings);
   applyAllSettings();
   document.getElementById('setupModal').classList.remove('open');

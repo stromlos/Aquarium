@@ -68,7 +68,7 @@
   .ww-mix-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;}
   .ww-rec-mix{font-size:11px;color:var(--text3);margin-top:5px;padding-top:5px;border-top:1px dashed var(--border);}
   .ww-rec-row{flex-direction:column;align-items:stretch;}
-  .ww-rec-row-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .ww-rec-row-top{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:100%;}
   .ww-rec-custom{cursor:default;}
   .ww-rec-custom:active{border-color:var(--border);}
   .page{display:none;max-width:100%;overflow-x:hidden;}
@@ -777,7 +777,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.4';
+const APP_VERSION = '1.8.5';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -1163,7 +1163,7 @@ function renderWWRecommendation(){
       <div class="ww-rec-row-top" style="gap:8px">
         <input type="text" inputmode="decimal" class="form-input" id="ww-custom-liter" placeholder="z.B. 5" style="flex:1;min-width:70px;padding:8px 10px;font-size:13px;text-align:left" oninput="updateCustomMix()">
         <span style="font-size:12px;color:var(--text3);flex-shrink:0">Liter</span>
-        <button class="btn-secondary" style="padding:8px 14px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="applyCustomWW()">Übernehmen</button>
+        <button class="btn-secondary" style="width:auto;flex-shrink:0;padding:8px 14px;font-size:12px;white-space:nowrap" onclick="applyCustomWW()">Übernehmen</button>
       </div>
       <div id="ww-custom-pct" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
       <div class="ww-rec-mix" id="mix-custom" style="display:none"></div>

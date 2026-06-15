@@ -777,7 +777,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.8.3';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -1159,10 +1159,11 @@ function renderWWRecommendation(){
     }).join('')}
 
     <div class="ww-rec-row ww-rec-custom" data-pct="custom">
+      <div style="font-size:13px;font-weight:600;color:var(--accent2);margin-bottom:8px">✏️ Eigene Menge</div>
       <div class="ww-rec-row-top" style="gap:8px">
-        <span class="ww-rec-pct" style="min-width:auto;font-size:13px">✏️ Eigene Menge:</span>
-        <input type="number" step="0.5" min="0" class="form-input" id="ww-custom-liter" placeholder="Liter" style="flex:1;padding:8px 10px;font-size:13px" oninput="updateCustomMix()">
-        <button class="btn-secondary" style="padding:8px 14px;font-size:12px;white-space:nowrap" onclick="applyCustomWW()">Übernehmen</button>
+        <input type="number" step="0.5" min="0" class="form-input" id="ww-custom-liter" placeholder="Liter" style="flex:1;min-width:0;padding:8px 10px;font-size:13px" oninput="updateCustomMix()">
+        <span style="font-size:12px;color:var(--text3);flex-shrink:0">Liter</span>
+        <button class="btn-secondary" style="padding:8px 14px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="applyCustomWW()">Übernehmen</button>
       </div>
       <div id="ww-custom-pct" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
       <div class="ww-rec-mix" id="mix-custom" style="display:none"></div>

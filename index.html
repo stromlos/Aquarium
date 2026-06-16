@@ -777,7 +777,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.5';
+const APP_VERSION = '1.8.6';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -2468,22 +2468,27 @@ function renderStatsFert(){
   const fs = filterByRange(state.fertilizer,'date');
   const el = document.getElementById('stats-fert');
   const canvas = document.getElementById('stats-fert-chart');
-  if(!fs.length){ el.innerHTML='<div style="color:var(--text3);font-size:13px">Keine Düngungen im Zeitraum</div>'; canvas.style.display='none'; return; }
+  if(!el) return;
 
-  // Group by name
+  if(!fs.length){
+    el.innerHTML='<div style="color:var(--text3);font-size:13px">Keine Düngungen im gewählten Zeitraum.</div>';
+    if(canvas) canvas.style.display='none';
+    return;
+  }
+
   const byName={};
-  fs.forEach(f=>{ byName[f.name]=(byName[f.name]||0)+(f.ml||0); });
+  fs.forEach(f=>{ byName[f.name]=(byName[f.name]||0)+(parseFloat(f.ml)||0); });
   const sorted = Object.entries(byName).sort((a,b)=>b[1]-a[1]);
-  const totalMl = fs.reduce((a,f)=>a+(f.ml||0),0);
+  const totalMl = fs.reduce((a,f)=>a+(parseFloat(f.ml)||0),0);
 
   el.innerHTML = `
     <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${fs.length} Düngungen · ${totalMl.toFixed(1)} ml gesamt</div>
     ${sorted.map(([name,ml])=>{
-      const pct = Math.round(ml/totalMl*100);
+      const pct = totalMl>0 ? Math.round(ml/totalMl*100) : 0;
       return `<div style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-          <span style="color:var(--text2)">${name}</span>
-          <span style="color:var(--success);font-weight:600">${ml.toFixed(1)} ml</span>
+          <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${name}</span>
+          <span style="color:var(--success);font-weight:600;flex-shrink:0">${ml.toFixed(1)} ml</span>
         </div>
         <div style="background:var(--border);border-radius:4px;height:5px">
           <div style="width:${pct}%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--success),var(--accent))"></div>
@@ -2491,31 +2496,39 @@ function renderStatsFert(){
       </div>`;
     }).join('')}`;
 
-  // Monthly bar chart for fertilizer
-  canvas.style.display='block';
-  const monthly={};
-  fs.forEach(f=>{ const key=f.date.slice(0,7); monthly[key]=(monthly[key]||0)+(f.ml||0); });
-  const months=Object.keys(monthly).sort();
-  drawBarChart(canvas, months.map(m=>{ const [y,mo]=m.split('-'); return mo+'/'+y.slice(2); }), months.map(m=>monthly[m]), 'var(--success)', 120, 'ml pro Monat');
+  if(canvas){
+    const monthly={};
+    fs.forEach(f=>{ const key=f.date.slice(0,7); monthly[key]=(monthly[key]||0)+(parseFloat(f.ml)||0); });
+    const months=Object.keys(monthly).sort();
+    if(months.length){
+      canvas.style.display='block';
+      setTimeout(()=>drawBarChart(canvas, months.map(m=>{ const [y,mo]=m.split('-'); return mo+'/'+y.slice(2); }), months.map(m=>monthly[m]), 'var(--success)', 120), 30);
+    } else { canvas.style.display='none'; }
+  }
 }
 
-// ── Korrelation WW ↔ Messwerte ────────────────────────────────────────────────
 function renderStatsCorr(){
   const el = document.getElementById('stats-corr');
+  if(!el) return;
+
   const wcs = [...state.waterChanges].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  if(wcs.length < 2 || state.measurements.length < 3){
-    el.innerHTML='<div style="color:var(--text3);font-size:13px">Zu wenig Daten für Korrelationsanalyse. Mindestens 2 Wasserwechsel und 3 Messungen benötigt.</div>';
+  const meas = state.measurements;
+
+  if(wcs.length < 1 || meas.length < 2){
+    el.innerHTML=`<div style="color:var(--text3);font-size:13px">
+      Zu wenig Daten – mindestens 1 Wasserwechsel und 2 Messungen benötigt.<br>
+      <span style="font-size:11px">Aktuell: ${wcs.length} Wasserwechsel, ${meas.length} Messungen</span>
+    </div>`;
     return;
   }
 
-  // For each WW: find nearest measurement before and after
   const results = [];
   PARAMS.forEach(p=>{
     let improved=0, worsened=0, unchanged=0;
     wcs.forEach(wc=>{
       const wcDate = new Date(wc.date+'T12:00:00');
-      const before = state.measurements.filter(m=>m[p.key]!==undefined && new Date(m.date+'T12:00:00') < wcDate).slice(-1)[0];
-      const after  = state.measurements.filter(m=>m[p.key]!==undefined && new Date(m.date+'T12:00:00') > wcDate).slice( 0)[0];
+      const before = meas.filter(m=>m[p.key]!==undefined && new Date(m.date+'T12:00:00') < wcDate).slice(-1)[0];
+      const after  = meas.filter(m=>m[p.key]!==undefined && new Date(m.date+'T12:00:00') > wcDate)[0];
       if(!before||!after) return;
       const lim = getLimit(p.key);
       const mid = (lim.min+lim.max)/2;
@@ -2529,7 +2542,12 @@ function renderStatsCorr(){
     if(total>0) results.push({ param:p, improved, worsened, unchanged, total });
   });
 
-  el.innerHTML = results.length ? `
+  if(!results.length){
+    el.innerHTML='<div style="color:var(--text3);font-size:13px">Keine auswertbaren Paare gefunden – es werden Messungen vor und nach jedem Wasserwechsel benötigt.</div>';
+    return;
+  }
+
+  el.innerHTML = `
     <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Zeigt ob sich Messwerte nach einem Wasserwechsel verbessert haben (näher am Idealwert).</div>
     ${results.map(r=>{
       const iPct=Math.round(r.improved/r.total*100);
@@ -2551,7 +2569,7 @@ function renderStatsCorr(){
           <span style="color:var(--warn)">▼ ${wPct}% schlechter</span>
         </div>
       </div>`;
-    }).join('')}` : '<div style="color:var(--text3);font-size:13px">Keine auswertbaren Daten gefunden.</div>';
+    }).join('')}`;
 }
 
 // ── Bar chart helper ──────────────────────────────────────────────────────────

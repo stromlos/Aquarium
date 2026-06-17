@@ -1404,27 +1404,32 @@ function toggleFertHistory(){
   const open = el.style.display === 'none';
   el.style.display = open ? 'block' : 'none';
   btn.textContent  = open ? '▲ Ausblenden' : '▼ Anzeigen';
-  if(open) renderFertHistory();
+  if(open) renderFertHistoryDOM();
 }
 
 function renderFertHistory(){
+  // Always called after save – only render DOM if visible
   const el = document.getElementById('fert-history');
-  if(!el || el.style.display === 'none') return;
+  if(el && el.style.display !== 'none') renderFertHistoryDOM();
+}
+
+function renderFertHistoryDOM(){
+  const el = document.getElementById('fert-history');
+  if(!el) return;
   const list = [...state.fertilizer].reverse().slice(0, 20);
   if(!list.length){ el.innerHTML='<div style="color:var(--text3);font-size:13px">Noch keine Düngungen eingetragen</div>'; return; }
   const typeColor = { Volldünger:'var(--success)', Makro:'var(--accent2)', Mikro:'var(--accent3)', 'CO₂':'var(--warn)', Sonstiges:'var(--text3)' };
   el.innerHTML = list.map(f => `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${typeColor[f.type]||'var(--text3)'}"></div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:500">${f.name}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${f.date} ${f.time} · ${f.type}${f.note?' · '+f.note:''}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${f.date} ${f.time||''} · ${f.type}${f.note?' · '+f.note:''}</div>
       </div>
-      <div style="font-size:15px;font-weight:600;color:var(--success);white-space:nowrap">${f.ml} ml</div>
-      <button class="btn-danger" style="padding:4px 8px;font-size:11px" onclick="removeFertilizer(${f.id})">✕</button>
+      <div style="font-size:15px;font-weight:600;color:var(--success);white-space:nowrap;flex-shrink:0">${f.ml} ml</div>
+      <button class="btn-danger" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="removeFertilizer(${f.id})">✕</button>
     </div>`).join('');
 
-  // Show custom name management below history if any exist
   const custom = getCustomFertNames();
   if(custom.length){
     el.innerHTML += `
@@ -2503,9 +2508,7 @@ function renderStatsFert(){
   if(!el) return;
 
   try {
-    // Debug: show raw state regardless
     const allFert = state.fertilizer || [];
-    const fs = filterByRange(allFert, 'date');
 
     if(allFert.length === 0){
       el.innerHTML='<div style="color:var(--text3);font-size:13px">Noch keine Düngungen eingetragen.</div>';
@@ -2513,71 +2516,58 @@ function renderStatsFert(){
       return;
     }
 
-    if(fs.length === 0){
-      // Show all data ignoring filter
-      el.innerHTML=`<div style="color:var(--warn);font-size:12px;margin-bottom:8px">⚠ Keine Einträge im gewählten Zeitraum – zeige alle ${allFert.length} Einträge:</div>`;
-      const tempFs = allFert;
-      const byName={};
-      tempFs.forEach(f=>{ const n=f.name||'Unbekannt'; byName[n]=(byName[n]||0)+(parseFloat(f.ml)||0); });
-      const sorted = Object.entries(byName).sort((a,b)=>b[1]-a[1]);
-      const totalMl = sorted.reduce((a,[,v])=>a+v, 0);
-      el.innerHTML += sorted.map(([name,ml])=>{
-        const pct = totalMl>0 ? Math.round(ml/totalMl*100) : 0;
-        return `<div style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-            <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${name}</span>
-            <span style="color:var(--success);font-weight:600">${ml.toFixed(1)} ml (${pct}%)</span>
-          </div>
-          <div style="background:var(--border);border-radius:4px;height:6px">
-            <div style="width:${pct}%;height:100%;border-radius:4px;background:var(--success)"></div>
-          </div>
-        </div>`;
-      }).join('');
-      if(canvas) canvas.style.display='none';
-      return;
-    }
+    // Always show all data – use allFert, ignore range filter for fert
+    const src = allFert;
 
-    const byName={};
-    fs.forEach(f=>{ const n=f.name||'Unbekannt'; byName[n]=(byName[n]||0)+(parseFloat(f.ml)||0); });
-    const sorted = Object.entries(byName).sort((a,b)=>b[1]-a[1]);
-    const totalMl = sorted.reduce((a,[,v])=>a+v, 0);
+    const byName = {};
+    src.forEach(f => {
+      const n = (f.name || 'Unbekannt').trim();
+      byName[n] = (byName[n] || 0) + (parseFloat(f.ml) || 0);
+    });
+    const sorted  = Object.entries(byName).sort((a, b) => b[1] - a[1]);
+    const totalMl = sorted.reduce((a, [, v]) => a + v, 0);
 
     el.innerHTML = `
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${fs.length} Düngungen · ${totalMl.toFixed(1)} ml gesamt</div>
-      ${sorted.map(([name,ml])=>{
-        const pct = totalMl>0 ? Math.round(ml/totalMl*100) : 0;
-        return `<div style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-            <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${name}</span>
-            <span style="color:var(--success);font-weight:600;flex-shrink:0">${ml.toFixed(1)} ml (${pct}%)</span>
-          </div>
-          <div style="background:var(--border);border-radius:4px;height:6px">
-            <div style="width:${pct}%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--success),var(--accent))"></div>
-          </div>
-        </div>`;
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">${src.length} Düngungen · ${totalMl.toFixed(1)} ml gesamt</div>
+      ${sorted.map(([name, ml]) => {
+        const pct = totalMl > 0 ? Math.round(ml / totalMl * 100) : 0;
+        return '<div style="margin-bottom:10px">' +
+          '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;gap:8px">' +
+            '<span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + name + '</span>' +
+            '<span style="color:var(--success);font-weight:600;flex-shrink:0">' + ml.toFixed(1) + ' ml · ' + pct + '%</span>' +
+          '</div>' +
+          '<div style="background:var(--border);border-radius:4px;height:6px">' +
+            '<div style="width:' + pct + '%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--success),var(--accent))"></div>' +
+          '</div>' +
+        '</div>';
       }).join('')}`;
 
     if(canvas){
-      const monthly={};
-      fs.forEach(f=>{ const key=(f.date||'').slice(0,7); if(key) monthly[key]=(monthly[key]||0)+(parseFloat(f.ml)||0); });
-      const months=Object.keys(monthly).sort();
+      const monthly = {};
+      src.forEach(f => {
+        const key = (f.date || '').slice(0, 7);
+        if(key) monthly[key] = (monthly[key] || 0) + (parseFloat(f.ml) || 0);
+      });
+      const months = Object.keys(monthly).sort();
       if(months.length){
-        canvas.style.display='block';
-        setTimeout(()=>{
+        canvas.style.display = 'block';
+        setTimeout(() => {
           drawBarChart(canvas,
-            months.map(m=>{ const [y,mo]=m.split('-'); return (mo||'?')+'/'+(y||'').slice(2); }),
-            months.map(m=>monthly[m]),
+            months.map(m => { const p=m.split('-'); return (p[1]||'?')+'/'+(p[0]||'').slice(2); }),
+            months.map(m => monthly[m]),
             'var(--success)', 120);
         }, 50);
-      } else { canvas.style.display='none'; }
+      } else {
+        canvas.style.display = 'none';
+      }
     }
+
   } catch(e) {
-    console.error('renderStatsFert error:', e);
-    el.innerHTML=`<div style="color:var(--danger);font-size:12px">Fehler: ${e.message}</div>`;
-    if(canvas) canvas.style.display='none';
+    console.error('renderStatsFert:', e);
+    el.innerHTML = '<div style="color:var(--danger);font-size:12px">Fehler: ' + e.message + '</div>';
+    if(canvas) canvas.style.display = 'none';
   }
 }
-
 function renderStatsCorr(){
   const el = document.getElementById('stats-corr');
   if(!el) return;

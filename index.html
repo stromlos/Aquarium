@@ -2270,7 +2270,6 @@ function renderStatsSummary(){
   const wcs = filterByRange(state.waterChanges,  'date');
   const fs  = filterByRange(state.fertilizer,    'date');
   const label = statsRangeDays ? `letzten ${statsRangeDays} Tage` : 'gesamt';
-
   const avgOf = key => {
     const vals = ms.map(m=>m[key]).filter(v=>v!==undefined);
     return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '–';
@@ -2470,16 +2469,36 @@ function renderStatsFert(){
   if(!el) return;
 
   try {
-    const fs = filterByRange(state.fertilizer, 'date');
+    // Debug: show raw state regardless
+    const allFert = state.fertilizer || [];
+    const fs = filterByRange(allFert, 'date');
 
-    if(!state.fertilizer || state.fertilizer.length === 0){
+    if(allFert.length === 0){
       el.innerHTML='<div style="color:var(--text3);font-size:13px">Noch keine Düngungen eingetragen.</div>';
       if(canvas) canvas.style.display='none';
       return;
     }
 
-    if(!fs.length){
-      el.innerHTML=`<div style="color:var(--text3);font-size:13px">Keine Düngungen im gewählten Zeitraum (${statsRangeDays} Tage).<br><span style="font-size:11px">Gesamt vorhanden: ${state.fertilizer.length}. Zeitraum anpassen oder "Gesamt" wählen.</span></div>`;
+    if(fs.length === 0){
+      // Show all data ignoring filter
+      el.innerHTML=`<div style="color:var(--warn);font-size:12px;margin-bottom:8px">⚠ Keine Einträge im gewählten Zeitraum – zeige alle ${allFert.length} Einträge:</div>`;
+      const tempFs = allFert;
+      const byName={};
+      tempFs.forEach(f=>{ const n=f.name||'Unbekannt'; byName[n]=(byName[n]||0)+(parseFloat(f.ml)||0); });
+      const sorted = Object.entries(byName).sort((a,b)=>b[1]-a[1]);
+      const totalMl = sorted.reduce((a,[,v])=>a+v, 0);
+      el.innerHTML += sorted.map(([name,ml])=>{
+        const pct = totalMl>0 ? Math.round(ml/totalMl*100) : 0;
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${name}</span>
+            <span style="color:var(--success);font-weight:600">${ml.toFixed(1)} ml (${pct}%)</span>
+          </div>
+          <div style="background:var(--border);border-radius:4px;height:6px">
+            <div style="width:${pct}%;height:100%;border-radius:4px;background:var(--success)"></div>
+          </div>
+        </div>`;
+      }).join('');
       if(canvas) canvas.style.display='none';
       return;
     }
@@ -2520,7 +2539,7 @@ function renderStatsFert(){
     }
   } catch(e) {
     console.error('renderStatsFert error:', e);
-    el.innerHTML=`<div style="color:var(--danger);font-size:12px">Fehler beim Laden: ${e.message}</div>`;
+    el.innerHTML=`<div style="color:var(--danger);font-size:12px">Fehler: ${e.message}</div>`;
     if(canvas) canvas.style.display='none';
   }
 }

@@ -188,6 +188,27 @@
   .lex-compat{margin-top:10px;}
   .lex-compat-title{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;font-weight:700;}
   .lex-compat-list{font-size:12px;color:var(--text2);line-height:1.7;}
+
+  /* Wasserwerte Guide */
+  .wg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+  .wg-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;}
+  .wg-icon{font-size:26px;width:34px;text-align:center;flex-shrink:0;}
+  .wg-info{flex:1;}
+  .wg-name{font-size:15px;font-weight:600;}
+  .wg-range{font-size:11px;color:var(--accent);margin-top:2px;font-weight:600;}
+  .wg-chevron{font-size:12px;color:var(--text3);transition:transform 0.2s;}
+  .wg-chevron.open{transform:rotate(180deg);}
+  .wg-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border);}
+  .wg-body.open{display:block;}
+  .wg-desc{font-size:13px;color:var(--text2);line-height:1.7;margin:10px 0;}
+  .wg-tips-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin:10px 0 6px;}
+  .wg-tip{display:flex;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:12px;line-height:1.6;}
+  .wg-tip.up{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);}
+  .wg-tip.down{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);}
+  .wg-tip.warn{background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.2);}
+  .wg-tip-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+  .wg-effect{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .wg-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text3);}
   .ai-response{font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;}
   .add-to-tank-btn{margin-top:10px;padding:9px 14px;background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.3);border-radius:var(--radius-sm);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;width:100%;transition:all 0.2s;}
   .add-to-tank-btn:active{background:rgba(45,212,191,0.25);}
@@ -550,6 +571,7 @@
           <button class="pill-tab" onclick="setLexCat('fish',this)">🐠 Fische</button>
           <button class="pill-tab" onclick="setLexCat('shrimp',this)">🦐 Garnelen</button>
           <button class="pill-tab" onclick="setLexCat('snail',this)">🐌 Schnecken</button>
+          <button class="pill-tab" onclick="setLexCat('water',this)">💧 Wasserwerte</button>
         </div>
       </div>
 
@@ -777,7 +799,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.7';
+const APP_VERSION = '1.8.8';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -3088,7 +3110,13 @@ function setLexCat(cat, btn){
   lexCat=cat;
   document.querySelectorAll('#lex-cat-tabs .pill-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  filterLexicon();
+  if(cat==='water'){
+    document.getElementById('lex-search').style.display='none';
+    renderWaterGuide();
+  } else {
+    document.getElementById('lex-search').style.display='block';
+    filterLexicon();
+  }
 }
 
 function filterLexicon(){
@@ -3282,7 +3310,13 @@ function scrollToLex(id){
 }
 
 function renderLexicon(){
-  filterLexicon();
+  if(lexCat === 'water'){
+    renderWaterGuide();
+    document.getElementById('lex-search').style.display = 'none';
+  } else {
+    document.getElementById('lex-search').style.display = 'block';
+    filterLexicon();
+  }
   // Pre-fill AI fields from last measurement
   const last=state.measurements[state.measurements.length-1];
   if(last){
@@ -3291,6 +3325,148 @@ function renderLexicon(){
     if(last.gh)document.getElementById('ai-gh').value=last.gh;
     if(last.kh)document.getElementById('ai-kh').value=last.kh;
   }
+}
+
+// ── WASSERWERTE GUIDE ─────────────────────────────────────────────────────────
+const WATER_GUIDE = [
+  {
+    id:'wg-temp', icon:'🌡️', name:'Temperatur', unit:'°C', ideal:'22–26°C',
+    desc:'Die Wassertemperatur beeinflusst Stoffwechsel, Sauerstoffsättigung und das Immunsystem aller Bewohner. Zu hohe Temperaturen senken den Sauerstoffgehalt und fördern Krankheitserreger. Zu niedrige Temperaturen verlangsamen den Stoffwechsel und schwächen das Immunsystem.',
+    effects:['Sauerstoffgehalt','Stoffwechsel','Krankheitsanfälligkeit','Laichverhalten'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'Erhöhen: Heizstab höher einstellen. Für empfindliche Arten (Diskus, C. sterbai) Stabheizer mit Thermostat nutzen. Nachtabsenkung vermeiden.' },
+      { dir:'down',  icon:'🔻', text:'Senken: Lüfter über der Wasseroberfläche (Verdunstungskälte). Kleinere, kältere Wasserwechsel. Im Sommer Beleuchtungsdauer reduzieren.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: Schwankungen von mehr als 2°C innerhalb weniger Stunden stressen Fische stark. Immer langsame Veränderungen anstreben.' },
+    ]
+  },
+  {
+    id:'wg-ph', icon:'⚗️', name:'pH-Wert', unit:'', ideal:'6.5–7.5',
+    desc:'Der pH-Wert gibt an wie sauer oder basisch das Wasser ist (7 = neutral). Er beeinflusst die Toxizität von Ammoniak, die Verfügbarkeit von Nährstoffen und das Wohlbefinden der Tiere. Der pH verändert sich tagesabhängig durch Photosynthese und CO₂.',
+    effects:['Ammoniak-Toxizität','Nährstoffverfügbarkeit','Pflanzenwachstum','CO₂-Gehalt'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'pH erhöhen: Belüftung erhöhen (CO₂ austreiben). Muschelkalk oder Korallensand ins Filter. Natriumbikarbonat (Natron) vorsichtig dosieren. Wasserwechsel mit hartem Leitungswasser.' },
+      { dir:'down',  icon:'🔻', text:'pH senken: CO₂-Anlage einsetzen. Torf ins Filter (gibt Huminsäuren ab). Osmosewasser beimengen. Schwarzwasser-Extrakt (Seemandelbaumblätter, Erlenzapfen).' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: pH nie mehr als 0,5 Einheiten pro Tag verändern. pH unter 6,0 und über 8,5 ist für die meisten Arten schädlich. Messung morgens und abends vergleichen (CO₂-Schwankung).' },
+    ]
+  },
+  {
+    id:'wg-gh', icon:'💎', name:'GH – Gesamthärte', unit:'°dH', ideal:'4–12 °dH',
+    desc:'Die Gesamthärte misst die Konzentration von Calcium- und Magnesiumionen. Sie ist entscheidend für die Osmose in den Zellen, die Schalenbildung bei Schnecken und Garnelen sowie die Stabilität des pH-Wertes. Weiches Wasser (niedrige GH) ist ideal für viele Amazonienfische und Caridina-Garnelen.',
+    effects:['Schalen- & Panzerbildung','Osmose','Pflanzennährstoffe','pH-Stabilität'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'GH erhöhen: Mineralstein oder Calcium-Magnesium-Salz zugeben. Leitungswasser hat oft höhere GH als Osmosewasser. Spezielle Aufhärtesalze verwenden (z.B. Sera Mineral Salt).' },
+      { dir:'down',  icon:'🔻', text:'GH senken: Osmosewasser (0 °dH) anteilig beimischen. Regenwasser (nur in sauberen Regionen). Vollentsalztes Wasser mit Remineralisierer für gewünschten Wert.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: Für Crystal-Garnelen GH 4–6 °dH mit speziellem Caridina-Salz anstreben. Für Neocaridina GH 6–15 °dH. Sehr weiches Wasser (< 2 °dH) ist instabil und pH-anfällig.' },
+    ]
+  },
+  {
+    id:'wg-kh', icon:'🏔️', name:'KH – Karbonathärte', unit:'°dH', ideal:'3–8 °dH',
+    desc:'Die Karbonathärte (Bikarbonathärte) ist der wichtigste pH-Puffer im Aquarium. Sie verhindert pH-Abstürze und ist direkt mit dem CO₂-Gehalt verknüpft (CO₂ = 3 × KH × 10^(7−pH)). Eine ausreichende KH schützt vor gefährlichen pH-Schwankungen, besonders nachts.',
+    effects:['pH-Pufferung','CO₂-Gleichgewicht','pH-Stabilität','Algenvorbeugung'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'KH erhöhen: Natriumbikarbonat (Backpulver, 1 TL pro 50L erhöht KH um ~4 °dH). Muschelkalk oder Marmorkies ins Filter. Kaliumbikarbonat als Alternative (kein Natrium).' },
+      { dir:'down',  icon:'🔻', text:'KH senken: Osmosewasser beimischen. Torf ins Filter (langsam, pH sinkt mit). Für Schwarzwasserbecken KH unter 2 °dH anstreben.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: KH unter 2 °dH führt zu pH-Abstürzen, besonders nachts ohne Pflanzen-Photosynthese. Bei CO₂-Düngung mindestens KH 3–4 °dH einhalten.' },
+    ]
+  },
+  {
+    id:'wg-no2', icon:'☠️', name:'Nitrit (NO₂)', unit:'mg/l', ideal:'0 mg/l',
+    desc:'Nitrit ist hochtoxisch für Fische – schon 0,1 mg/l kann zu "Braunblut" (Methämoglobinämie) führen, bei dem die roten Blutkörperchen keinen Sauerstoff mehr transportieren können. Nitrit entsteht beim Abbau von Ammoniak durch Nitrosomonas-Bakterien und sollte immer 0 mg/l betragen.',
+    effects:['Sauerstofftransport im Blut','Filterbakterienstatus','Aquariumreife','Fischgesundheit'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'Nitrit erhöhen: Nicht erwünscht! Entsteht automatisch bei zu viel Futter, totem Tier oder neuem Becken (Einfahrphase 4–8 Wochen).' },
+      { dir:'down',  icon:'🔻', text:'Nitrit senken: Sofort 30–50% Wasserwechsel. Filterung verbessern (mehr Filtervolumen, biologische Filtermedien). Fütterung drastisch reduzieren. Kochsalz vorübergehend (hemmt Nitritaufnahme der Fische).' },
+      { dir:'warn',  icon:'⚠️', text:'Notfall: Bei NO₂ über 0,5 mg/l sofort großen Wasserwechsel durchführen. Kochsalz (1–2 g/l) schützt Fische kurzfristig. Ursache (totes Tier, überlastetes Filter) suchen.' },
+    ]
+  },
+  {
+    id:'wg-no3', icon:'🌿', name:'Nitrat (NO₃)', unit:'mg/l', ideal:'0–25 mg/l',
+    desc:'Nitrat ist das Endprodukt des Stickstoffkreislaufs und deutlich weniger toxisch als Nitrit. Es ist das Hauptdüngemittel für Aquarienpflanzen. Hohe Nitratwerte (über 50 mg/l) begünstigen Algen und stressen empfindliche Arten wie Diskus, Garnelen und Salmler langfristig.',
+    effects:['Algenwachstum','Pflanzendünger','Langzeitstress','Garnelen-Reproduktion'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'Nitrat erhöhen: Mehr Fütterung, mehr Besatz. Für bepflanzte Becken gezielt mit Makro-Dünger (Aqua Rebell Makro Basic Nitrat) auf 10–20 mg/l anheben.' },
+      { dir:'down',  icon:'🔻', text:'Nitrat senken: Regelmäßige Wasserwechsel (wichtigste Maßnahme). Schnell wachsende Pflanzen (Hornkraut, Wasserlinsen) verbrauchen viel Nitrat. Nitrat-Adsorber im Filter. Fütterung reduzieren.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: Für Garnelenbecken unter 10 mg/l anstreben. Für Diskus unter 20 mg/l. Wöchentliche Wasserwechsel sind die effektivste Langzeit-Methode.' },
+    ]
+  },
+  {
+    id:'wg-fe', icon:'🔩', name:'Eisen (Fe)', unit:'mg/l', ideal:'0.05–0.3 mg/l',
+    desc:'Eisen ist der wichtigste Mikronährstoff für Aquarienpflanzen. Es ist Bestandteil des Chlorophylls und bei Eisenmangel zeigen Pflanzen zunächst Chlorosen (gelbe Blätter bei grünen Blattadern). Im Wasser liegt Eisen meist als Fe²⁺ (löslich, für Pflanzen verfügbar) oder Fe³⁺ (unlöslich, rotbrauner Niederschlag) vor.',
+    effects:['Pflanzenwachstum','Blattfarbe','Chlorophyllbildung','Algenwachstum'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'Eisen erhöhen: Eisendünger zugeben (JBL Ferro Basics, Aqua Rebell Mikro Basic Eisen, Seachem Flourish Iron). Eisendüngung abends – UV-Licht und Sauerstoff bauen Fe²⁺ schnell ab. Substrattabs für Wurzeldüngung.' },
+      { dir:'down',  icon:'🔻', text:'Eisen senken: Wasserwechsel. UV-Klärer baut gelöstes Eisen ab. Aktivkohle im Filter adsorbiert Eisen kurzfristig. Bei Eisen aus dem Leitungswasser Aktivkohle-Vorfilter nutzen.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: Über 0,5 mg/l kann Kiemenprobleme bei Fischen verursachen und fördert Blaualgen. Eisen immer morgens vor dem Licht dosieren und nach 4–6h messen. Chelat-Eisen ist stabiler als normales Fe²⁺.' },
+    ]
+  },
+  {
+    id:'wg-co2', icon:'🌿', name:'CO₂ (Kohlendioxid)', unit:'mg/l', ideal:'15–30 mg/l',
+    desc:'CO₂ ist das wichtigste Düngemittel für Aquarienpflanzen und wird von ihnen bei der Photosynthese benötigt. Der CO₂-Gehalt beeinflusst direkt den pH-Wert (mehr CO₂ = niedrigerer pH). Bei über 30 mg/l beginnt CO₂ für Fische und Garnelen schädlich zu werden, da es die Sauerstoffaufnahme behindert.',
+    effects:['Pflanzenwachstum','pH-Wert','Sauerstoffversorgung','Algenprophylaxe'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'CO₂ erhöhen: CO₂-Druckanlage (effektivste Methode). CO₂-Diffusor mit Blasenzähler. Bio-CO₂ (Hefe + Zucker, für kleinere Becken). Belüftung reduzieren (CO₂ geht sonst aus). Pflanzen fördern durch mehr CO₂.' },
+      { dir:'down',  icon:'🔻', text:'CO₂ senken: Belüftung/Strömung erhöhen (CO₂ ausgasen lassen). CO₂-Anlage nachts ausschalten (Pflanzen produzieren nachts CO₂ statt es zu verbrauchen). Wasserwechsel.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: CO₂-Anlage nachts abschalten! Pflanzen produzieren nachts CO₂ – kombiniert mit der Anlage kann CO₂ auf gefährliche Werte steigen. Immer Blasenzähler nutzen und Dauertest im Becken haben.' },
+    ]
+  },
+  {
+    id:'wg-o2', icon:'💨', name:'Sauerstoff (O₂)', unit:'mg/l', ideal:'6–9 mg/l',
+    desc:'Sauerstoff ist lebensnotwendig für alle Aquarienbewohner. Er wird von Pflanzen tagsüber produziert und nachts verbraucht. Die Sauerstoffsättigung hängt stark von der Temperatur ab (warmes Wasser kann weniger O₂ lösen) und von der Wasseroberflächen-Bewegung.',
+    effects:['Fischgesundheit','Filterbakterien','Pflanzenstoffwechsel','Nachtabsenkung'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'Sauerstoff erhöhen: Belüftungsstein oder Belüftungspumpe (besonders nachts). Strömungspumpe für mehr Oberflächenbewegung. Temperatur senken. Bepflanzung erhöhen (tagsüber O₂-Produktion). Wasserwechsel.' },
+      { dir:'down',  icon:'🔻', text:'Sauerstoff senken: Selten nötig. Belüftung reduzieren wenn CO₂-Anlage im Einsatz (verhindert CO₂-Ausgasung).' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: Fische an der Oberfläche schnappend = Sauerstoffmangel! Sofort Belüftung einschalten, Wasserwechsel durchführen. Nachts sind O₂-Werte am niedrigsten – in dicht bepflanzten Becken auf Nachtbelüftung achten.' },
+    ]
+  },
+  {
+    id:'wg-nh3', icon:'💀', name:'Ammoniak / Ammonium (NH₃/NH₄⁺)', unit:'mg/l', ideal:'0 mg/l',
+    desc:'Ammoniak (NH₃) ist hochtoxisch, Ammonium (NH₄⁺) dagegen weitgehend ungiftig. Das Verhältnis hängt vom pH ab: bei pH 7 liegt fast alles als ungiftiges NH₄⁺ vor, bei pH 8 steigt der gefährliche NH₃-Anteil stark. Erhöhte Werte zeigen ein überlastetes oder nicht eingespieltes Filter an.',
+    effects:['Filterstatus','pH-Abhängigkeit','Kiemenschäden','Aquariumreife'],
+    tips:[
+      { dir:'up',   icon:'🔺', text:'Erhöhen: Nicht erwünscht! Entsteht durch Futter, Kot, tote Organismen. Wird von Nitrosomonas-Bakterien zu Nitrit umgewandelt.' },
+      { dir:'down',  icon:'🔻', text:'Senken: Sofortiger Wasserwechsel. Fütterung einstellen. Tote Tiere/Pflanzenteile entfernen. Zeolith im Filter (adsorbiert NH₄⁺). pH unter 7 halten (NH₃ in ungiftiges NH₄⁺ umwandeln). FilterSTARTer hinzugeben.' },
+      { dir:'warn',  icon:'⚠️', text:'Warnung: Bei neuem Becken (Einfahrphase) täglich messen. Bei pH über 8 und Ammonium im Wasser ist der giftige NH₃-Anteil erheblich – Fische sofort in Quarantäne.' },
+    ]
+  },
+];
+
+function renderWaterGuide(){
+  const el = document.getElementById('lex-list');
+  el.innerHTML = `
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;padding:0 4px">
+      Erklärungen zu allen wichtigen Wasserparametern – Bedeutung, Idealwerte und wie du sie gezielt beeinflussen kannst.
+    </div>
+    ${WATER_GUIDE.map(p=>`
+      <div class="wg-card">
+        <div class="wg-header" onclick="toggleWG('${p.id}')">
+          <span class="wg-icon">${p.icon}</span>
+          <div class="wg-info">
+            <div class="wg-name">${p.name}</div>
+            <div class="wg-range">Ideal: ${p.ideal}</div>
+          </div>
+          <span class="wg-chevron" id="wgchev-${p.id}">▼</span>
+        </div>
+        <div class="wg-body" id="wgbody-${p.id}">
+          <div class="wg-desc">${p.desc}</div>
+          <div class="wg-effect">
+            ${p.effects.map(e=>`<span class="wg-badge">${e}</span>`).join('')}
+          </div>
+          <div class="wg-tips-title" style="color:var(--text2);margin-top:14px">💡 Wie beeinflussen?</div>
+          ${p.tips.map(t=>`
+            <div class="wg-tip ${t.dir}">
+              <span class="wg-tip-icon">${t.icon}</span>
+              <span style="color:var(--text2)">${t.text}</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}`;
+}
+
+function toggleWG(id){
+  const body = document.getElementById('wgbody-'+id);
+  const chev = document.getElementById('wgchev-'+id);
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
 }
 
 // ── SETUP / SETTINGS ─────────────────────────────────────────────────────────

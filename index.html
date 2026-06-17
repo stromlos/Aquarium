@@ -421,8 +421,11 @@
 
       <!-- DÜNGE-HISTORIE -->
       <div class="card">
-        <div class="card-title">🌿 Dünge-Protokoll</div>
-        <div id="fert-history"></div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleFertHistory()">
+          <span>🌿 Dünge-Protokoll</span>
+          <span id="fert-history-toggle" style="font-size:12px;color:var(--accent);font-weight:500;letter-spacing:normal;text-transform:none">▼ Anzeigen</span>
+        </div>
+        <div id="fert-history" style="display:none"></div>
       </div>
     </div>
 
@@ -799,7 +802,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.8';
+const APP_VERSION = '1.8.9';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -1395,9 +1398,18 @@ function removeCustomFertName(name){
   showToast('Dünger entfernt');
 }
 
+function toggleFertHistory(){
+  const el  = document.getElementById('fert-history');
+  const btn = document.getElementById('fert-history-toggle');
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  btn.textContent  = open ? '▲ Ausblenden' : '▼ Anzeigen';
+  if(open) renderFertHistory();
+}
+
 function renderFertHistory(){
   const el = document.getElementById('fert-history');
-  if(!el) return;
+  if(!el || el.style.display === 'none') return;
   const list = [...state.fertilizer].reverse().slice(0, 20);
   if(!list.length){ el.innerHTML='<div style="color:var(--text3);font-size:13px">Noch keine Düngungen eingetragen</div>'; return; }
   const typeColor = { Volldünger:'var(--success)', Makro:'var(--accent2)', Mikro:'var(--accent3)', 'CO₂':'var(--warn)', Sonstiges:'var(--text3)' };

@@ -165,6 +165,12 @@
   .stat-row:last-child{border-bottom:none;}
   .stat-label{font-size:13px;color:var(--text2);}
   .stat-val{font-size:13px;font-weight:700;color:var(--text);}
+  /* Accordion */
+  .acc-title{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
+  .acc-chev{font-size:11px;color:var(--accent);font-weight:400;letter-spacing:normal;text-transform:none;transition:transform 0.2s;flex-shrink:0;margin-left:8px;}
+  .acc-chev.open{transform:rotate(180deg);}
+  .acc-body{padding-top:10px;}
+
   .lex-card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
   .lex-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;}
   .lex-emoji{font-size:28px;width:36px;text-align:center;flex-shrink:0;}
@@ -337,95 +343,135 @@
     <!-- WASSER -->
     <div id="page-water" class="page">
       <div class="section-title">Wasserqualität</div>
+
+      <!-- Aktuelle Werte (immer sichtbar) -->
       <div class="card"><div class="card-title">Aktuelle Werte</div><div id="param-list"></div></div>
       <div id="co2-card"></div>
+
+      <!-- Verlaufs-Chart -->
       <div class="card" style="border-color:rgba(56,189,248,0.3)">
-        <div class="card-title">📈 Statistik – Verlauf</div>
-        <div class="chart-selector" id="chartSelector"></div>
-        <canvas id="statChart" height="160" style="width:100%"></canvas>
-        <div class="no-data-hint" id="chartNoData" style="display:none">Noch zu wenig Messungen.<br>Bitte mindestens 2 Messungen speichern.</div>
-        <div class="chart-legend"><span id="chartMin"></span><span id="chartAvg"></span><span id="chartMax"></span></div>
+        <div class="card-title acc-title" onclick="toggleAcc('acc-chart')">
+          📈 Verlauf <span class="acc-chev" id="chev-acc-chart">▼</span>
+        </div>
+        <div id="acc-chart" class="acc-body" style="display:none">
+          <div class="chart-selector" id="chartSelector"></div>
+          <canvas id="statChart" height="160" style="width:100%"></canvas>
+          <div class="no-data-hint" id="chartNoData" style="display:none">Noch zu wenig Messungen.</div>
+          <div class="chart-legend"><span id="chartMin"></span><span id="chartAvg"></span><span id="chartMax"></span></div>
+        </div>
       </div>
-      <div class="card"><div class="card-title">Wasserwechsel-Historie</div><div class="water-history" id="water-history"></div></div>
+
+      <!-- WW-Historie -->
+      <div class="card">
+        <div class="card-title acc-title" onclick="toggleAcc('acc-wwhistory')">
+          💧 Wasserwechsel-Historie <span class="acc-chev" id="chev-acc-wwhistory">▼</span>
+        </div>
+        <div id="acc-wwhistory" class="acc-body" style="display:none">
+          <div class="water-history" id="water-history"></div>
+        </div>
+      </div>
+
+      <!-- WW-Empfehlung -->
       <div class="card" id="ww-recommend-card" style="border-color:rgba(56,189,248,0.3)">
-        <div class="card-title">📐 Empfehlung Wasserwechsel</div>
-        <div id="ww-recommend-content"></div>
+        <div class="card-title acc-title" onclick="toggleAcc('acc-wwrec')">
+          📐 Empfehlung & Mischrechner <span class="acc-chev" id="chev-acc-wwrec">▼</span>
+        </div>
+        <div id="acc-wwrec" class="acc-body" style="display:none">
+          <div id="ww-recommend-content"></div>
+        </div>
       </div>
+
+      <!-- WW dokumentieren -->
       <div class="card" style="border-color:rgba(45,212,191,0.3)">
-        <div class="card-title">Wasserwechsel dokumentieren</div>
-        <div class="form-group"><label class="form-label">Datum</label><input type="date" class="form-input" id="ww-date"></div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Menge (Liter)</label><input type="number" class="form-input" id="ww-liter" placeholder="z.B. 20"></div>
-          <div class="form-group"><label class="form-label">Anteil (%)</label><input type="number" class="form-input" id="ww-pct" placeholder="z.B. 30"></div>
+        <div class="card-title acc-title" onclick="toggleAcc('acc-ww')">
+          💧 Wasserwechsel dokumentieren <span class="acc-chev" id="chev-acc-ww">▼</span>
         </div>
-        <div class="form-group"><label class="form-label">Notiz</label><textarea class="form-textarea" id="ww-note" placeholder="Beobachtungen..."></textarea></div>
-        <button class="btn-primary" onclick="saveWaterChange()">💧 Wasserwechsel speichern</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Messung hinzufügen</div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Temperatur (°C)</label><input type="number" step="0.1" class="form-input" id="m-temp" placeholder="24.0"></div>
-          <div class="form-group"><label class="form-label">pH-Wert</label><input type="number" step="0.1" class="form-input" id="m-ph" placeholder="7.0"></div>
+        <div id="acc-ww" class="acc-body" style="display:none">
+          <div class="form-group"><label class="form-label">Datum</label><input type="date" class="form-input" id="ww-date"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Menge (Liter)</label><input type="number" class="form-input" id="ww-liter" placeholder="z.B. 20"></div>
+            <div class="form-group"><label class="form-label">Anteil (%)</label><input type="number" class="form-input" id="ww-pct" placeholder="z.B. 30"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Notiz</label><textarea class="form-textarea" id="ww-note" placeholder="Beobachtungen..."></textarea></div>
+          <button class="btn-primary" onclick="saveWaterChange()">💧 Wasserwechsel speichern</button>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">GH (°dH)</label><input type="number" step="0.5" class="form-input" id="m-gh" placeholder="8"></div>
-          <div class="form-group"><label class="form-label">KH (°dH)</label><input type="number" step="0.5" class="form-input" id="m-kh" placeholder="4"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Nitrit NO₂ (mg/l)</label><input type="number" step="0.01" class="form-input" id="m-no2" placeholder="0.00"></div>
-          <div class="form-group"><label class="form-label">Nitrat NO₃ (mg/l)</label><input type="number" step="1" class="form-input" id="m-no3" placeholder="10"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Eisen Fe (mg/l)</label><input type="number" step="0.01" class="form-input" id="m-fe" placeholder="0.1"></div>
-          <div class="form-group"></div>
-        </div>
-        <button class="btn-primary" onclick="saveMeasurement()" style="margin-top:4px">📊 Messung speichern</button>
       </div>
 
-      <!-- DÜNGEN -->
+      <!-- Messung hinzufügen -->
+      <div class="card">
+        <div class="card-title acc-title" onclick="toggleAcc('acc-meas')">
+          📊 Messung hinzufügen <span class="acc-chev" id="chev-acc-meas">▼</span>
+        </div>
+        <div id="acc-meas" class="acc-body" style="display:none">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Temperatur (°C)</label><input type="number" step="0.1" class="form-input" id="m-temp" placeholder="24.0"></div>
+            <div class="form-group"><label class="form-label">pH-Wert</label><input type="number" step="0.1" class="form-input" id="m-ph" placeholder="7.0"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">GH (°dH)</label><input type="number" step="0.5" class="form-input" id="m-gh" placeholder="8"></div>
+            <div class="form-group"><label class="form-label">KH (°dH)</label><input type="number" step="0.5" class="form-input" id="m-kh" placeholder="4"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nitrit NO₂ (mg/l)</label><input type="number" step="0.01" class="form-input" id="m-no2" placeholder="0.00"></div>
+            <div class="form-group"><label class="form-label">Nitrat NO₃ (mg/l)</label><input type="number" step="1" class="form-input" id="m-no3" placeholder="10"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Eisen Fe (mg/l)</label><input type="number" step="0.01" class="form-input" id="m-fe" placeholder="0.1"></div>
+            <div class="form-group"></div>
+          </div>
+          <button class="btn-primary" onclick="saveMeasurement()" style="margin-top:4px">📊 Messung speichern</button>
+        </div>
+      </div>
+
+      <!-- Düngung dokumentieren -->
       <div class="card" style="border-color:rgba(74,222,128,0.3)">
-        <div class="card-title">🌿 Düngung dokumentieren</div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Datum</label><input type="date" class="form-input" id="fert-date"></div>
-          <div class="form-group"><label class="form-label">Uhrzeit</label><input type="time" class="form-input" id="fert-time"></div>
+        <div class="card-title acc-title" onclick="toggleAcc('acc-fert')">
+          🌿 Düngung dokumentieren <span class="acc-chev" id="chev-acc-fert">▼</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">Dünger</label>
-          <select class="form-select" id="fert-name" onchange="fertSelectChange(this)">
-            <option value="">– Dünger wählen –</option>
-          </select>
-          <div id="fert-custom-wrap" style="display:none;margin-top:8px;display:none">
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="text" class="form-input" id="fert-custom" placeholder="Dünger-Name eingeben…" style="flex:1">
-              <button type="button" onclick="saveCustomFertName()" style="padding:10px 14px;background:rgba(45,212,191,0.15);border:1px solid rgba(45,212,191,0.4);border-radius:var(--radius-sm);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap">+ Speichern</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">Name wird dauerhaft in der Liste gespeichert</div>
+        <div id="acc-fert" class="acc-body" style="display:none">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Datum</label><input type="date" class="form-input" id="fert-date"></div>
+            <div class="form-group"><label class="form-label">Uhrzeit</label><input type="time" class="form-input" id="fert-time"></div>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Menge (ml)</label><input type="number" step="0.1" class="form-input" id="fert-ml" placeholder="z.B. 5"></div>
-          <div class="form-group"><label class="form-label">Typ</label>
-            <select class="form-select" id="fert-type">
-              <option value="Volldünger">Volldünger</option>
-              <option value="Makro">Makro (NPK)</option>
-              <option value="Mikro">Mikro / Eisen</option>
-              <option value="CO₂">CO₂-Zugabe</option>
-              <option value="Sonstiges">Sonstiges</option>
+          <div class="form-group">
+            <label class="form-label">Dünger</label>
+            <select class="form-select" id="fert-name" onchange="fertSelectChange(this)">
+              <option value="">– Dünger wählen –</option>
             </select>
+            <div id="fert-custom-wrap" style="display:none;margin-top:8px">
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" class="form-input" id="fert-custom" placeholder="Dünger-Name eingeben…" style="flex:1">
+                <button type="button" onclick="saveCustomFertName()" style="padding:10px 14px;background:rgba(45,212,191,0.15);border:1px solid rgba(45,212,191,0.4);border-radius:var(--radius-sm);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap">+ Speichern</button>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:5px">Name wird dauerhaft in der Liste gespeichert</div>
+            </div>
           </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Menge (ml)</label><input type="number" step="0.1" class="form-input" id="fert-ml" placeholder="z.B. 5"></div>
+            <div class="form-group"><label class="form-label">Typ</label>
+              <select class="form-select" id="fert-type">
+                <option value="Volldünger">Volldünger</option>
+                <option value="Makro">Makro (NPK)</option>
+                <option value="Mikro">Mikro / Eisen</option>
+                <option value="CO₂">CO₂-Zugabe</option>
+                <option value="Sonstiges">Sonstiges</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">Notiz (optional)</label>
+            <input type="text" class="form-input" id="fert-note" placeholder="z.B. nach Wasserwechsel, Wochendosis"></div>
+          <button class="btn-primary" onclick="saveFertilizer()">🌱 Düngung speichern</button>
         </div>
-        <div class="form-group"><label class="form-label">Notiz (optional)</label>
-          <input type="text" class="form-input" id="fert-note" placeholder="z.B. nach Wasserwechsel, Wochendosis"></div>
-        <button class="btn-primary" onclick="saveFertilizer()">🌱 Düngung speichern</button>
       </div>
 
-      <!-- DÜNGE-HISTORIE -->
+      <!-- Dünge-Protokoll -->
       <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleFertHistory()">
-          <span>🌿 Dünge-Protokoll</span>
-          <span id="fert-history-toggle" style="font-size:12px;color:var(--accent);font-weight:500;letter-spacing:normal;text-transform:none">▼ Anzeigen</span>
+        <div class="card-title acc-title" onclick="toggleAcc('acc-fertlog', true)">
+          🌿 Dünge-Protokoll <span class="acc-chev" id="chev-acc-fertlog">▼</span>
         </div>
-        <div id="fert-history" style="display:none"></div>
+        <div id="acc-fertlog" class="acc-body" style="display:none">
+          <div id="fert-history"></div>
+        </div>
       </div>
     </div>
 
@@ -802,7 +848,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.8.9';
+const APP_VERSION = '1.9.0';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -1398,19 +1444,24 @@ function removeCustomFertName(name){
   showToast('Dünger entfernt');
 }
 
-function toggleFertHistory(){
-  const el  = document.getElementById('fert-history');
-  const btn = document.getElementById('fert-history-toggle');
-  const open = el.style.display === 'none';
-  el.style.display = open ? 'block' : 'none';
-  btn.textContent  = open ? '▲ Ausblenden' : '▼ Anzeigen';
-  if(open) renderFertHistoryDOM();
+function toggleAcc(id){
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-'+id);
+  if(!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if(chev) chev.classList.toggle('open', open);
+  if(open && id === 'acc-chart') setTimeout(drawChart, 50);
+  if(open && id === 'acc-fertlog') renderFertHistoryDOM();
+  if(open && id === 'acc-wwrec') renderWWRecommendation();
 }
 
+function toggleFertHistory(){ toggleAcc('acc-fertlog'); }
+
 function renderFertHistory(){
-  // Always called after save – only render DOM if visible
-  const el = document.getElementById('fert-history');
-  if(el && el.style.display !== 'none') renderFertHistoryDOM();
+  const body = document.getElementById('acc-fertlog');
+  if(body && body.style.display === 'none') return;
+  renderFertHistoryDOM();
 }
 
 function renderFertHistoryDOM(){
@@ -2279,13 +2330,21 @@ function filterByRange(arr, dateKey){
 }
 
 function renderStats(){
-  buildStatsParamTabs();
-  renderStatsSummary();
-  renderStatsMainChart();
-  renderStatsMiniCharts();
-  renderStatsWW();
-  renderStatsFert();
-  renderStatsCorr();
+  try{ buildStatsParamTabs(); }catch(e){ console.error('buildStatsParamTabs:',e); }
+  try{ renderStatsSummary(); }catch(e){ console.error('renderStatsSummary:',e); }
+  try{ renderStatsMainChart(); }catch(e){ console.error('renderStatsMainChart:',e); }
+  try{ renderStatsMiniCharts(); }catch(e){ console.error('renderStatsMiniCharts:',e); }
+  try{ renderStatsWW(); }catch(e){ console.error('renderStatsWW:',e); }
+  try{ renderStatsFert(); }catch(e){
+    console.error('renderStatsFert:',e);
+    const el=document.getElementById('stats-fert');
+    if(el) el.innerHTML=`<div style="color:var(--danger);font-size:12px">Fehler: ${e.message}</div>`;
+  }
+  try{ renderStatsCorr(); }catch(e){
+    console.error('renderStatsCorr:',e);
+    const el=document.getElementById('stats-corr');
+    if(el) el.innerHTML=`<div style="color:var(--danger);font-size:12px">Fehler: ${e.message}</div>`;
+  }
 }
 
 function buildStatsParamTabs(){

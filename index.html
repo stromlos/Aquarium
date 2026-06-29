@@ -54,6 +54,11 @@
   .cal-event-text{font-size:13px;color:var(--text2);line-height:1.5;}
   .cal-event-time{font-size:10px;color:var(--text3);margin-top:2px;}
 
+  /* EHEIM Slider */
+  .eheim-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:var(--border);outline:none;cursor:pointer;}
+  .eheim-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+  .eheim-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);}
+
   /* WW Recommendation Table */
   .ww-rec-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}
   .ww-rec-row:active{border-color:var(--accent);}
@@ -551,21 +556,76 @@
     <!-- BELEUCHTUNG -->
     <div id="page-light" class="page">
       <div class="section-title">Beleuchtung</div>
-      <div class="card"><div class="card-title">Beleuchtungsphasen</div><div id="light-phases"></div></div>
+
+      <!-- EHEIM LEDcontrol+e -->
+      <div class="card" style="border-color:rgba(251,191,36,0.4);background:linear-gradient(135deg,rgba(251,191,36,0.06),var(--surface))">
+        <div class="card-title">💡 EHEIM LEDcontrol+e</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div id="eheim-status-dot" style="width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>
+          <span id="eheim-status-text" style="font-size:13px;color:var(--text3)">Nicht verbunden</span>
+          <button onclick="eheimConnect()" style="margin-left:auto;padding:6px 14px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:8px;color:#fbbf24;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">🔌 Verbinden</button>
+        </div>
+
+        <!-- Modus-Auswahl -->
+        <div style="margin-bottom:12px">
+          <div class="form-label" style="margin-bottom:6px">Betriebsmodus</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="eheimSetMode('daycycle')" id="eheim-btn-daycycle" style="flex:1;padding:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);border-radius:10px;color:var(--accent2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">🌅 Tageszyklus</button>
+            <button onclick="eheimSetMode('manual')"   id="eheim-btn-manual"   style="flex:1;padding:8px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:10px;color:var(--accent3);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">✋ Manuell</button>
+          </div>
+        </div>
+
+        <!-- Helligkeit (Kanal 1 + 2) -->
+        <div id="eheim-manual-panel">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Helligkeit manuell</div>
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+              <span>☀️ Kanal 1 (Weiß/Haupt)</span><span id="eheim-ch1-val">50%</span>
+            </div>
+            <input type="range" min="0" max="100" value="50" id="eheim-ch1" class="eheim-slider" oninput="document.getElementById('eheim-ch1-val').textContent=this.value+'%'" onchange="eheimSetBrightness()">
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+              <span>🌙 Kanal 2 (Blau/Mondlicht)</span><span id="eheim-ch2-val">0%</span>
+            </div>
+            <input type="range" min="0" max="100" value="0" id="eheim-ch2" class="eheim-slider" oninput="document.getElementById('eheim-ch2-val').textContent=this.value+'%'" onchange="eheimSetBrightness()">
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="eheimQuick(100,0)"  style="flex:1;padding:8px 4px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);border-radius:8px;color:#fbbf24;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer">☀️ Volllicht</button>
+            <button onclick="eheimQuick(0,30)"   style="flex:1;padding:8px 4px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:8px;color:var(--accent2);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer">🌙 Mondlicht</button>
+            <button onclick="eheimQuick(0,0)"    style="flex:1;padding:8px 4px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;color:var(--danger);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer">⚫ Aus</button>
+          </div>
+        </div>
+
+        <!-- Gerät-Info -->
+        <div id="eheim-device-info" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:none"></div>
+
+        <!-- Direkt-Link Fallback -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">📱 Direkte Weboberfläche öffnen:</div>
+          <a href="http://192.168.6.169" target="_blank" style="display:block;text-align:center;padding:8px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:8px;color:#fbbf24;font-size:12px;text-decoration:none">🔗 192.168.6.169 im Browser öffnen</a>
+        </div>
+      </div>
+
+      <div class="card"><div class="card-title acc-title" onclick="toggleAcc('acc-lightphases')">Beleuchtungsphasen <span class="acc-chev" id="chev-acc-lightphases">▼</span></div>
+        <div id="acc-lightphases" class="acc-body" style="display:none"><div id="light-phases"></div></div>
+      </div>
       <div class="card" style="border-color:rgba(167,139,250,0.3)">
-        <div class="card-title">Phase hinzufügen</div>
-        <div class="form-group"><label class="form-label">Bezeichnung</label><input type="text" class="form-input" id="l-name" placeholder="z.B. Hauptlicht"></div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Einschaltzeit</label><input type="time" class="form-input" id="l-on"></div>
-          <div class="form-group"><label class="form-label">Ausschaltzeit</label><input type="time" class="form-input" id="l-off"></div>
+        <div class="card-title acc-title" onclick="toggleAcc('acc-lightadd')">Phase hinzufügen <span class="acc-chev" id="chev-acc-lightadd">▼</span></div>
+        <div id="acc-lightadd" class="acc-body" style="display:none">
+          <div class="form-group"><label class="form-label">Bezeichnung</label><input type="text" class="form-input" id="l-name" placeholder="z.B. Hauptlicht"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Einschaltzeit</label><input type="time" class="form-input" id="l-on"></div>
+            <div class="form-group"><label class="form-label">Ausschaltzeit</label><input type="time" class="form-input" id="l-off"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Typ</label>
+            <select class="form-select" id="l-type">
+              <option value="Vollspektrum">Vollspektrum</option><option value="Weiß">Weißlicht</option>
+              <option value="Blau">Blaulicht (Mondlicht)</option><option value="Rot+Blau">Rot+Blau</option><option value="CO₂">CO₂-Anlage</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="addLightPhase()">💡 Phase speichern</button>
         </div>
-        <div class="form-group"><label class="form-label">Typ</label>
-          <select class="form-select" id="l-type">
-            <option value="Vollspektrum">Vollspektrum</option><option value="Weiß">Weißlicht</option>
-            <option value="Blau">Blaulicht (Mondlicht)</option><option value="Rot+Blau">Rot+Blau</option><option value="CO₂">CO₂-Anlage</option>
-          </select>
-        </div>
-        <button class="btn-primary" onclick="addLightPhase()">💡 Phase speichern</button>
       </div>
       <div class="card"><div class="card-title">Lichtprotokoll</div><div id="light-log"></div></div>
     </div>
@@ -848,7 +908,7 @@
 </div>
 
 <script>
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 const S={get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
 
 let state={
@@ -1874,6 +1934,122 @@ function removePlant(i){
 }
 
 // ── Lighting ─────────────────────────────────────────────────────────────────
+// ── EHEIM LEDcontrol+e ────────────────────────────────────────────────────────
+const EHEIM_IP   = '192.168.6.169';
+const EHEIM_BASE = `http://${EHEIM_IP}`;
+let eheimMode = 'daycycle';
+
+// EHEIM REST API uses Basic Auth (default: empty user + empty password for local)
+// Authentication header – can be adjusted if device requires credentials
+function eheimHeaders(){
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+}
+
+function eheimSetStatus(ok, text){
+  const dot  = document.getElementById('eheim-status-dot');
+  const span = document.getElementById('eheim-status-text');
+  if(!dot || !span) return;
+  dot.style.background  = ok ? 'var(--success)' : ok===null ? 'var(--warn)' : 'var(--danger)';
+  span.style.color      = ok ? 'var(--success)' : ok===null ? 'var(--warn)' : 'var(--danger)';
+  span.textContent      = text;
+}
+
+async function eheimConnect(){
+  eheimSetStatus(null, 'Verbinde…');
+  try {
+    const res = await fetch(`${EHEIM_BASE}/light`, {
+      method: 'GET',
+      headers: eheimHeaders(),
+      signal: AbortSignal.timeout(5000),
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    eheimSetStatus(true, 'Verbunden ✓');
+
+    // Show device info
+    const info = document.getElementById('eheim-device-info');
+    if(info){
+      info.style.display = 'block';
+      info.innerHTML = `Modus: <strong>${data.mode||'–'}</strong>` +
+        (data.ch1!==undefined ? ` · Ch1: ${data.ch1}%` : '') +
+        (data.ch2!==undefined ? ` · Ch2: ${data.ch2}%` : '');
+    }
+
+    // Sync sliders if manual mode
+    if(data.mode === 'manual' || data.mode === 1){
+      eheimMode = 'manual';
+      if(data.ch1 !== undefined){
+        document.getElementById('eheim-ch1').value = data.ch1;
+        document.getElementById('eheim-ch1-val').textContent = data.ch1+'%';
+      }
+      if(data.ch2 !== undefined){
+        document.getElementById('eheim-ch2').value = data.ch2;
+        document.getElementById('eheim-ch2-val').textContent = data.ch2+'%';
+      }
+    } else {
+      eheimMode = 'daycycle';
+    }
+    showToast('💡 EHEIM verbunden');
+  } catch(e) {
+    console.error('EHEIM connect:', e);
+    eheimSetStatus(false, 'Nicht erreichbar – im WLAN?');
+    showToast('⚠️ EHEIM nicht erreichbar. Im Heimnetz? PWA-Modus?');
+  }
+}
+
+async function eheimPost(endpoint, body){
+  try {
+    const res = await fetch(`${EHEIM_BASE}${endpoint}`, {
+      method: 'POST',
+      headers: eheimHeaders(),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+  } catch(e) {
+    console.error('EHEIM POST', endpoint, e);
+    eheimSetStatus(false, 'Verbindungsfehler');
+    showToast('⚠️ EHEIM: Verbindungsfehler');
+    return false;
+  }
+}
+
+async function eheimSetMode(mode){
+  eheimMode = mode;
+  document.getElementById('eheim-manual-panel').style.opacity = mode==='manual' ? '1' : '0.5';
+
+  if(mode === 'daycycle'){
+    const ok = await eheimPost('/light/daycycle', {});
+    eheimSetStatus(ok, ok ? 'Tageszyklus aktiv' : 'Fehler');
+    if(ok) showToast('🌅 Tageszyklus aktiviert');
+  } else {
+    // Switch to manual and apply current slider values
+    eheimSetBrightness();
+  }
+}
+
+async function eheimSetBrightness(){
+  const ch1 = parseInt(document.getElementById('eheim-ch1').value);
+  const ch2 = parseInt(document.getElementById('eheim-ch2').value);
+  const ok  = await eheimPost('/light/manual', { ch1, ch2 });
+  eheimSetStatus(ok, ok ? `Manuell: ${ch1}% / ${ch2}%` : 'Fehler');
+  if(ok){
+    addLog('light', `EHEIM LEDcontrol: ${ch1}% / ${ch2}% (manuell)`);
+    save();
+  }
+}
+
+function eheimQuick(ch1, ch2){
+  document.getElementById('eheim-ch1').value = ch1;
+  document.getElementById('eheim-ch2').value = ch2;
+  document.getElementById('eheim-ch1-val').textContent = ch1+'%';
+  document.getElementById('eheim-ch2-val').textContent = ch2+'%';
+  eheimSetBrightness();
+}
+
 function renderLight(){
   document.getElementById('light-phases').innerHTML=state.lightPhases.map((l,i)=>`<div class="light-row"><div class="light-info"><div class="light-name">💡 ${l.name}</div><div class="light-time">${l.on}–${l.off} · ${l.type}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="light-phase">${isLightOn(l)?'🟢 AN':'⚫ AUS'}</span><button class="btn-danger" style="padding:4px 8px;font-size:11px" onclick="removeLightPhase(${i})">✕</button></div></div>`).join('')||'<div style="color:var(--text3);font-size:13px">Noch keine Phasen</div>';
   const entries=state.log.filter(e=>e.cat==='light').reverse().slice(0,10);
